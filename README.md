@@ -16,7 +16,7 @@ This package is designed to mimic the usage of the sklearn package.  You first i
 
 ### Initialize:
 
-`from shapeGMM import gmm_shapes`
+`from shapeGMMTorch import torch_sgmm`
 
 Uniform (spherical, uncorrelated) covariance:
 
