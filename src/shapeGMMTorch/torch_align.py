@@ -29,7 +29,7 @@ def torch_sd(traj_tensor, ref_tensor):
     #rot_mat = torch.transpose(torch.matmul(u,v),1,2)
     # do rotation
     traj_tensor = torch.matmul(traj_tensor,rot_mat)
-    disp = traj_tensor - ref_tensor
+    disp = (traj_tensor - ref_tensor).to(torch.float64)
     sd = torch.matmul(disp.view(-1,1,n_atoms*3),disp.view(-1,n_atoms*3,1))[:,0,0]
     return sd
     # free up local variables 
@@ -209,8 +209,17 @@ def torch_align_kronecker(traj_tensor, ref_tensor, precision_tensor, dtype=torch
     del rot_mat
     torch.cuda.empty_cache()    
 
-
 def _torch_pseudo_inv(sigma, dtype=torch.float64, device=torch.device("cuda:0"),EigenValueThresh=1e-10):
+    N = sigma.shape[0]
+    e, v = torch.linalg.eigh(sigma)
+    pinv = torch.zeros(sigma.shape,dtype=dtype,device=device)
+    for i in range(N):
+        if (e[i] > EigenValueThresh):
+            pinv += 1.0/e[i]*torch.outer(v[:,i],v[:,i])
+    return pinv
+    
+    
+def _torch_pseudo_inv_lndet(sigma, dtype=torch.float64, device=torch.device("cuda:0"),EigenValueThresh=1e-10):
     N = sigma.shape[0]
     e, v = torch.linalg.eigh(sigma)
     pinv = torch.zeros(sigma.shape,dtype=dtype,device=device)
@@ -220,6 +229,12 @@ def _torch_pseudo_inv(sigma, dtype=torch.float64, device=torch.device("cuda:0"),
             lpdet += torch.log(e[i])
             pinv += 1.0/e[i]*torch.outer(v[:,i],v[:,i])
     return pinv, lpdet
+
+def _torch_pseudo_lndet(sigma, EigenValueThresh=1e-10):
+    e = torch.linalg.eigvalsh(sigma) 
+    e = torch.where(e > EigenValueThresh, e, 1.0)
+    lpdet = torch.sum(torch.log(e))
+    return lpdet
 
 def _torch_kronecker_log_lik(disp, precision, lpdet):
     # meta data
@@ -260,21 +275,22 @@ def torch_iterative_align_kronecker(traj_tensor, stride=1000, dtype=torch.float3
         # do rotation
         traj_tensor = torch.matmul(traj_tensor,rot_mat)
         # compute new average
-        avg = torch.mean(traj_tensor.to(torch.float64),0,False)
-        disp = traj_tensor.to(torch.float64) - avg
+        avg = torch.mean(traj_tensor,0,False)
+        disp = (traj_tensor - avg).to(torch.float64)
         # compute covar using strided data
         covar = torch.zeros((n_atoms,n_atoms),dtype=torch.float64,device=device)
         for frame in range(0,n_frames,stride):
             covar += torch.sum(torch.matmul(disp[frame:frame+stride],torch.transpose(disp[frame:frame+stride],1,2)),0)
         covar *= covar_norm
         # log likelihood
-        precision, lpdet = _torch_pseudo_inv(covar,dtype=torch.float64,device=device)
+        precision = torch.linalg.pinv(covar, atol=1e-10, hermitian= True)
+        lpdet = _torch_pseudo_lndet(covar)
         log_lik = _torch_kronecker_log_lik(disp, precision, lpdet)[0][0]
         delta_log_lik = abs(log_lik - old_log_lik)
         if verbose == True:
             print(log_lik)
         old_log_lik = log_lik
-        weighted_avg = torch.matmul(avg.T,precision).to(dtype)
+        weighted_avg = torch.matmul(avg.T.to(torch.float64),precision).to(dtype)
     return traj_tensor, avg, precision, lpdet
     # free up local variables 
     del c_mats
@@ -332,22 +348,22 @@ def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_ten
         # do rotation
         traj_tensor = torch.matmul(traj_tensor,rot_mat)
         # compute new average
-        avg = torch.sum((traj_tensor*weight_tensor.view(-1,1,1)).to(torch.float64),0,False)
-        disp = traj_tensor.to(torch.float64) - avg
+        avg = torch.sum((traj_tensor*weight_tensor.view(-1,1,1)),0,False)
+        disp = (traj_tensor - avg).to(torch.float64)
         # compute covar using strided data
         covar = torch.zeros((n_atoms,n_atoms),dtype=torch.float64,device=device)
         for frame in range(0,n_frames,stride):
             covar += torch.sum(torch.matmul(disp[frame:frame+stride],torch.transpose(disp[frame:frame+stride],1,2))*weight_tensor[frame:frame+stride].view(-1,1,1),0)
         covar *= covar_norm
         # log likelihood
-        precision, lpdet = _torch_pseudo_inv(covar,dtype=torch.float64,device=device)
+        precision = torch.linalg.pinv(covar, atol=1e-10, hermitian= True)
+        lpdet = _torch_pseudo_lndet(covar)
         log_lik = _torch_kronecker_weighted_log_lik(disp, weight_tensor, precision, lpdet)[0][0]
         delta_log_lik = abs(log_lik - old_log_lik)
         if verbose == True:
             print(log_lik)
         old_log_lik = log_lik
-        weighted_avg = torch.matmul(avg.T,precision).to(dtype)
-        
+        weighted_avg = torch.matmul(avg.T.to(torch.float64),precision).to(dtype)     
     return traj_tensor, avg, precision, lpdet
     # free up local variables 
     del c_mats

@@ -69,8 +69,9 @@ def torch_sgmm_kronecker_em(traj_tensor, centers_tensor, precisions_tensor, lpde
     # update averages and variances of each cluster
     for k in range(n_clusters):
         gamma_indeces = torch.argwhere(gamma_tensor[:,k] > GAMMA_THRESH).flatten()
-        # update mean and variance
-        centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[gamma_indeces], gamma_tensor[gamma_indeces,k].to(dtype), ref_tensor=centers_tensor[k], ref_precision_tensor=precisions_tensor[k], dtype=dtype, thresh=thresh, device=device)[1:]
+        if gamma_indeces.shape[0] > n_atoms:
+            # update mean and variance
+            centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[gamma_indeces], gamma_tensor[gamma_indeces,k].to(dtype), ref_tensor=centers_tensor[k], ref_precision_tensor=precisions_tensor[k], dtype=dtype, thresh=thresh, device=device)[1:]
     return centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, log_likelihood    
     del cluster_frame_ln_likelihoods
     del log_lorm
@@ -91,7 +92,7 @@ def torch_sgmm_expectation_kronecker(traj_tensor, centers_tensor, precisions_ten
     for k in range(n_clusters):
         # align trajectory to center with given preicions
         traj_tensor = torch_align.torch_align_kronecker(traj_tensor, centers_tensor[k], precisions_tensor[k],dtype=dtype, device=device)
-        disp = traj_tensor - centers_tensor[k]
+        disp = (traj_tensor - centers_tensor[k]).to(torch.float64)
         # Determine square deviation of each frame aligned to each mean
         cluster_frame_ln_likelihoods[:,k] = torch.matmul(disp[:,:,0].view(n_frames,1,n_atoms),torch.matmul(precisions_tensor[k],disp[:,:,0].view(n_frames,n_atoms,1)))[:,0,0]
         cluster_frame_ln_likelihoods[:,k] += torch.matmul(disp[:,:,1].view(n_frames,1,n_atoms),torch.matmul(precisions_tensor[k],disp[:,:,1].view(n_frames,n_atoms,1)))[:,0,0]
