@@ -4,12 +4,12 @@ import warnings
 warnings.filterwarnings('ignore')
 import random
 # the following are local libraries
-#from . import torch_align
-#from . import torch_uniform_lib
-#from . import torch_weighted_lib
-import torch_align
-import torch_uniform_sgmm_lib
-import torch_kronecker_sgmm_lib
+from . import torch_align
+from . import torch_uniform_sgmm_lib
+from . import torch_kronecker_sgmm_lib
+#import torch_align
+#import torch_uniform_sgmm_lib
+#import torch_kronecker_sgmm_lib
 
 # class
 class ShapeGMMTorch:
@@ -195,9 +195,9 @@ class ShapeGMMTorch:
             torch_align.torch_remove_center_of_geometry(traj_tensor,dtype=self.dtype,device=self.device)
             # Expectation step
             if self.covar_type == 'uniform': 
-                cluster_frame_ln_likelihoods_tensor = torch_uniform_lib.torch_sgmm_expectation_uniform(traj_tensor, centers_tensor, vars_tensor, device=self.device)
+                cluster_frame_ln_likelihoods_tensor = torch_uniform_sgmm_lib.torch_sgmm_expectation_uniform(traj_tensor, centers_tensor, vars_tensor, device=self.device)
             else: # assume weighted
-                cluster_frame_ln_likelihoods_tensor = torch_weighted_lib.torch_sgmm_expectation_kronecker(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, device=self.device)
+                cluster_frame_ln_likelihoods_tensor = torch_kronecker_sgmm_lib.torch_sgmm_expectation_kronecker(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, device=self.device)
             for k in range(self.n_clusters):
                 cluster_frame_ln_likelihoods_tensor[:,k] += ln_weights_tensor[k]
             log_norm = torch.logsumexp(cluster_frame_ln_likelihoods_tensor,1)

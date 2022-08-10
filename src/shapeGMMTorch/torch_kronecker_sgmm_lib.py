@@ -2,8 +2,8 @@ import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
 import random
-#from . import torch_align
-import torch_align
+from . import torch_align
+#import torch_align
 import torch
 
 NUMERIC_THRESH = 1E-150

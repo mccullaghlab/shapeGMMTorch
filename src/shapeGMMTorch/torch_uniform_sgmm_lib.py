@@ -2,8 +2,8 @@ import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
 import random
-#from . import torch_align
-import torch_align
+from . import torch_align
+#import torch_align
 import torch
 
 NUMERIC_THRESH = 1E-150
@@ -30,7 +30,7 @@ def uniform_sgmm_log_likelihood(traj_tensor, clusters, thresh=1e-3, dtype=torch.
         # determine center and variance of cluster using iterative alignment
         center, var = torch_align.torch_iterative_align_uniform(traj_tensor[indeces], thresh=thresh, dtype=dtype, device=device)[1:]
         # compute log likelihood
-        cluster_frame_ln_likelihoods[:,k] = torch_align.torch_sd(traj_tensor,centers_tensor[k])
+        cluster_frame_ln_likelihoods[:,k] = torch_align.torch_sd(traj_tensor,center)
         # divide be variance and normalize
         cluster_frame_ln_likelihoods[:,k] *= -0.5/var
         cluster_frame_ln_likelihoods[:,k] -= 1.5*(n_atoms-1)*torch.log(var)
