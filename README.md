@@ -6,11 +6,7 @@ This is a package to perform Gaussian Mixture Model (GMM) clustering on particle
 
 ## Installation
 
-The package can be installed using pip
-
-`pip install shapeGMM`
-
-or downloaded and installed with 
+The package can be installed by downloading and then running
 
 `python setup.py install`
 
