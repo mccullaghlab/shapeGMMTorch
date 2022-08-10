@@ -12,7 +12,7 @@ setuptools.setup(
     description='Gaussian Mixture Model clustering in size-and-shape space using PyTorch',
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url='https://github.com/mccullaghlab/shapeGMMTorch'
+    url='https://github.com/mccullaghlab/shapeGMMTorch',
     project_urls = {
         "Bug Tracker": "https://github.com/mccullaghlab/shapeGMMTorch/issues"
     },

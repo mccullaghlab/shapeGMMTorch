@@ -92,30 +92,14 @@ class ShapeGMMTorch:
         
     # fit
     def fit(self, traj_data, clusters = []):
-        # timing data
-        total_start = torch.cuda.Event(enable_timing=True)
-        total_start.record()
-        total_stop = torch.cuda.Event(enable_timing=True)
-        pass_data_start = torch.cuda.Event(enable_timing=True)
-        pass_data_stop = torch.cuda.Event(enable_timing=True)
-        pass_data_elapsed = 0.0
-        em_elapsed = 0.0
-        max_elapsed = 0.0
-        gamma_elapsed = 0.0
         
         # pass trajectory data to device
-        pass_data_start.record()
         traj_tensor = torch.tensor(traj_data,dtype=self.dtype,device=self.device)
-        pass_data_stop.record()
-        torch.cuda.synchronize()
-        pass_data_elapsed += pass_data_start.elapsed_time(pass_data_stop)
-        
         # Initialize clusters if they have not been already
         if (self.init_clusters_flag == False):
             self.init_clusters(traj_tensor, clusters)
             
         # declare some important arrays for the model
-        pass_data_start.record()
         centers_tensor = torch.empty((self.n_clusters,self.n_atoms,self.n_dim),dtype=self.dtype,device=self.device)
         self.weights = np.empty(self.n_clusters,dtype=np.float64)
         # uniform/weighted specific variables
@@ -141,9 +125,6 @@ class ShapeGMMTorch:
     
         # pass remaining data to device
         ln_weights_tensor = torch.tensor(np.log(self.weights),dtype=torch.float64,device=self.device)
-        pass_data_stop.record()
-        torch.cuda.synchronize()
-        pass_data_elapsed += pass_data_start.elapsed_time(pass_data_stop)
         
         # Determine initial log likelihood
         #if (self.verbose == True):
@@ -156,12 +137,9 @@ class ShapeGMMTorch:
         while step < self.max_steps and delta_log_lik > self.log_thresh:
             # Expectation maximization
             if self.covar_type == 'uniform':
-                centers_tensor, vars_tensor, ln_weights_tensor, log_likelihood, em_temp, max_temp, gamma_temp = torch_uniform_sgmm_lib.torch_sgmm_uniform_em(traj_tensor, centers_tensor, vars_tensor, ln_weights_tensor, thresh=self.kabsch_thresh, dtype=self.dtype, device=self.device)
+                centers_tensor, vars_tensor, ln_weights_tensor, log_likelihood = torch_uniform_sgmm_lib.torch_sgmm_uniform_em(traj_tensor, centers_tensor, vars_tensor, ln_weights_tensor, thresh=self.kabsch_thresh, dtype=self.dtype, device=self.device)
             else:
-                centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, log_likelihood, em_temp, max_temp, gamma_temp = torch_kronecker_sgmm_lib.torch_sgmm_kronecker_em(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, thresh=self.kabsch_thresh, dtype=self.dtype, device=self.device)
-            em_elapsed += em_temp
-            max_elapsed += max_temp
-            gamma_elapsed += gamma_temp
+                centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, log_likelihood = torch_kronecker_sgmm_lib.torch_sgmm_kronecker_em(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, thresh=self.kabsch_thresh, dtype=self.dtype, device=self.device)
             if (self.verbose == True):
                 print(step+1, np.round(torch.exp(ln_weights_tensor).cpu().numpy(),3), np.round(log_likelihood.cpu().numpy(),3))
             # compute convergence criteria
@@ -171,7 +149,6 @@ class ShapeGMMTorch:
             step += 1
 
         # pass data back to cpu and delete from gpu
-        pass_data_start.record()
         self.weights = torch.exp(ln_weights_tensor).cpu().numpy()
         self.centers = centers_tensor.cpu().numpy()
         self.log_likelihood = log_likelihood.cpu().numpy()
@@ -190,9 +167,6 @@ class ShapeGMMTorch:
         del ln_weights_tensor
         del centers_tensor
         torch.cuda.empty_cache()
-        pass_data_stop.record()
-        torch.cuda.synchronize()
-        pass_data_elapsed += pass_data_start.elapsed_time(pass_data_stop)
         
         # assign clusters based on largest likelihood 
         self.clusters = np.argmax(self.cluster_frame_ln_likelihoods, axis = 1)
@@ -200,14 +174,6 @@ class ShapeGMMTorch:
         self.gmm_fit_flag = True
         # return aligned trajectory
         #return traj_data
-        total_stop.record()
-        torch.cuda.synchronize()
-        total_time = total_start.elapsed_time(total_stop)
-        print("Total elapsed time:",np.round(total_time,3))
-        print("Time to send data:", np.round(pass_data_elapsed,3), np.round(pass_data_elapsed/total_time*100,3))
-        print("Expectation time:", np.round(em_elapsed,3), np.round(em_elapsed/total_time*100,3))
-        print("Gamma time:", np.round(gamma_elapsed,3), np.round(gamma_elapsed/total_time*100,3))
-        print("Maximization time:", np.round(max_elapsed,3), np.round(max_elapsed/total_time*100,3))
 
     # predict clustering of provided data based on prefit parameters from fit_weighted
     def predict(self,traj_data):

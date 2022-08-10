@@ -73,13 +73,6 @@ def init_random(traj_tensor, n_clusters, dtype=torch.float32, device=torch.devic
 
 ## Expectation Maximization for GMM with uniform covariance model
 def torch_sgmm_uniform_em(traj_tensor, centers_tensor, vars_tensor, ln_weights_tensor, dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-3):
-    # timing data
-    em_start = torch.cuda.Event(enable_timing=True)
-    em_stop = torch.cuda.Event(enable_timing=True)
-    max_start = torch.cuda.Event(enable_timing=True)
-    max_stop = torch.cuda.Event(enable_timing=True)
-    gamma_start = torch.cuda.Event(enable_timing=True)
-    gamma_stop = torch.cuda.Event(enable_timing=True)
     
     # get metadata from trajectory data
     n_frames = traj_tensor.shape[0]
@@ -88,13 +81,9 @@ def torch_sgmm_uniform_em(traj_tensor, centers_tensor, vars_tensor, ln_weights_t
     n_clusters = ln_weights_tensor.shape[0]
 
     # Expectation step:
-    em_start.record()
     cluster_frame_ln_likelihoods_tensor = torch_sgmm_expectation_uniform(traj_tensor, centers_tensor, vars_tensor, device=device)
-    em_stop.record()
-    torch.cuda.synchronize()
     
     # compute log likelihood and gamma normalization
-    gamma_start.record()
     for k in range(n_clusters):
         cluster_frame_ln_likelihoods_tensor[:,k] += ln_weights_tensor[k]
     log_norm = torch.logsumexp(cluster_frame_ln_likelihoods_tensor,1)
@@ -105,16 +94,12 @@ def torch_sgmm_uniform_em(traj_tensor, centers_tensor, vars_tensor, ln_weights_t
     gamma_tensor = torch.exp(cluster_frame_ln_likelihoods_tensor - log_norm.view(-1,1))
     # update the weights
     ln_weights_tensor = torch.log(torch.mean(gamma_tensor,0))
-    gamma_stop.record()
     # update averages and variances of each cluster
-    max_start.record()
     for k in range(n_clusters):
         gamma_indeces = torch.argwhere(gamma_tensor[:,k] > GAMMA_THRESH).flatten()
         # update mean and variance
         centers_tensor[k], vars_tensor[k] = torch_align.torch_iterative_align_uniform_weighted(traj_tensor[gamma_indeces], gamma_tensor[gamma_indeces,k].to(dtype), ref_tensor=centers_tensor[k], dtype=dtype, thresh=thresh, device=device)[1:]
-    max_stop.record()
-    torch.cuda.synchronize()
-    return centers_tensor, vars_tensor, ln_weights_tensor, log_likelihood, em_start.elapsed_time(em_stop), max_start.elapsed_time(max_stop), gamma_start.elapsed_time(gamma_stop)    
+    return centers_tensor, vars_tensor, ln_weights_tensor, log_likelihood    
     del gamma_tensor
     del gamma_indeces
     torch.cuda.empty_cache()
