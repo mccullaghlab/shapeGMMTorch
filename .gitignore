@@ -1,0 +1,14 @@
+# ignore all logs
+*.log
+# ignore gz
+*.gz
+# ignore wheel files
+*.whl
+# ignore vi backups
+*~
+*.swp
+# ignore jupyter checkpoints
+*.ipynb_checkpoints
+# pycache
+__pycache__
+
