@@ -6,7 +6,7 @@ def torch_remove_center_of_geometry(traj_tensor, dtype=torch.float32, device=tor
     # meta data
     n_frames = traj_tensor.shape[0]
     # compute geometric center of each frame
-    cog = torch.mean(traj_tensor,1,False)
+    cog = torch.mean(traj_tensor.to(torch.float64),1,False)
     # substract from each frame
     for i in range(n_frames):
         traj_tensor[i] -= cog[i]
@@ -14,7 +14,7 @@ def torch_remove_center_of_geometry(traj_tensor, dtype=torch.float32, device=tor
     del cog
     torch.cuda.empty_cache()
 
-def torch_sd(traj_tensor, ref_tensor, dtype=torch.float32):
+def torch_sd(traj_tensor, ref_tensor):
     # meta data
     n_atoms = traj_tensor.shape[1]
     # compute correlation matrices using batched matmul
@@ -30,7 +30,7 @@ def torch_sd(traj_tensor, ref_tensor, dtype=torch.float32):
     # do rotation
     traj_tensor = torch.matmul(traj_tensor,rot_mat)
     disp = (traj_tensor - ref_tensor).to(torch.float64)
-    sd = torch.matmul(disp.view(-1,1,n_atoms*3),disp.view(-1,n_atoms*3,1))[:,0,0].to(dtype)
+    sd = torch.matmul(disp.view(-1,1,n_atoms*3),disp.view(-1,n_atoms*3,1))[:,0,0]
     return sd
     # free up local variables 
     del c_mats
@@ -187,7 +187,7 @@ def torch_iterative_align_uniform_weighted(traj_tensor, weight_tensor, ref_tenso
 def torch_align_kronecker(traj_tensor, ref_tensor, precision_tensor, dtype=torch.float32, device=torch.device("cuda:0")):
     
     # make weighted ref
-    weighted_avg = torch.matmul(ref_tensor.T,precision_tensor).to(dtype)
+    weighted_avg = torch.matmul(ref_tensor.T.to(torch.float64),precision_tensor).to(dtype)
     
     # compute correlation matrices using batched matmul
     c_mats = torch.matmul(weighted_avg,traj_tensor)
@@ -328,7 +328,7 @@ def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_ten
         # initialize with average as the first frame (arbitrary choice)
         weighted_avg = traj_tensor[0].T
     else:
-        weighted_avg = torch.matmul(ref_tensor.T,ref_precision_tensor).to(dtype)
+        weighted_avg = torch.matmul(ref_tensor.T.to(torch.float64),ref_precision_tensor).to(dtype)
     # pass normalization value to device
     covar_norm = torch.tensor(1/3,dtype=torch.float64,device=device)
     

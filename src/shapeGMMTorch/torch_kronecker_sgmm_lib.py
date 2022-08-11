@@ -81,7 +81,7 @@ def torch_sgmm_kronecker_em(traj_tensor, centers_tensor, precisions_tensor, lpde
 
 
 # Expectation step
-def torch_sgmm_expectation_kronecker(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, dtype=torch.float64, device=torch.device("cuda:0")):
+def torch_sgmm_expectation_kronecker(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, dtype=torch.float32, device=torch.device("cuda:0")):
     # meta data
     n_clusters = centers_tensor.shape[0]
     n_frames = traj_tensor.shape[0] 

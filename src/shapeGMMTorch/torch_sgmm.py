@@ -80,8 +80,8 @@ class ShapeGMMTorch:
             self.clusters = clusters
         else: # default is random
             for i in range(self.init_iter):
-                init_clusters = torch_uniform_sgmm_lib.init_random(traj_tensor,self.n_clusters,dtype=self.dtype,device=self.device)
-                log_lik = torch_uniform_sgmm_lib.uniform_sgmm_log_likelihood(traj_tensor,init_clusters,dtype=self.dtype, device=self.device).cpu().numpy()
+                init_clusters = torch_uniform_sgmm_lib.init_random(traj_tensor,self.n_clusters)
+                log_lik = torch_uniform_sgmm_lib.uniform_sgmm_log_likelihood(traj_tensor,init_clusters,device=self.device).cpu().numpy()
                 if (i==0 or log_lik > max_log_lik):
                     max_log_lik = log_lik
                     self.clusters = init_clusters
@@ -154,11 +154,11 @@ class ShapeGMMTorch:
         self.log_likelihood = log_likelihood.cpu().numpy()
         # uniform/weighted specific variables
         if self.covar_type == 'uniform': 
-            self.cluster_frame_ln_likelihoods =  torch_uniform_sgmm_lib.torch_sgmm_expectation_uniform(traj_tensor, centers_tensor, vars_tensor, device=self.device).cpu().numpy()
+            self.cluster_frame_ln_likelihoods =  torch_uniform_sgmm_lib.torch_sgmm_expectation_uniform(traj_tensor, centers_tensor, vars_tensor, dtype=self.dtype, device=self.device).cpu().numpy()
             self.vars = vars_tensor.cpu().numpy()
             del vars_tensor
         else: # assume weighted
-            self.cluster_frame_ln_likelihoods =  torch_kronecker_sgmm_lib.torch_sgmm_expectation_kronecker(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, device=self.device).cpu().numpy()
+            self.cluster_frame_ln_likelihoods =  torch_kronecker_sgmm_lib.torch_sgmm_expectation_kronecker(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, dtype=self.dtype, device=self.device).cpu().numpy()
             self.precisions = precisions_tensor.cpu().numpy()
             self.lpdets = lpdets_tensor.cpu().numpy()
             del precisions_tensor
