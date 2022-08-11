@@ -116,7 +116,7 @@ def torch_sgmm_expectation_uniform(traj_tensor, centers_tensor, vars_tensor, dev
     # compute likelihood of each frame at each Gaussian
     for k in range(n_clusters):
         # Determine square deviation of each frame aligned to each mean
-        cluster_frame_ln_likelihoods[:,k] = torch_align.torch_sd(traj_tensor,centers_tensor[k])
+        cluster_frame_ln_likelihoods[:,k] = torch_align.torch_sd(traj_tensor,centers_tensor[k], dtype=torch.float64)
         # divide be variance and normalize
         cluster_frame_ln_likelihoods[:,k] *= -0.5/vars_tensor[k]
         cluster_frame_ln_likelihoods[:,k] -= 1.5*(n_atoms-1)*torch.log(vars_tensor[k])

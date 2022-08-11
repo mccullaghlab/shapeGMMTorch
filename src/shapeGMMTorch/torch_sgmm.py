@@ -81,7 +81,7 @@ class ShapeGMMTorch:
         else: # default is random
             for i in range(self.init_iter):
                 init_clusters = torch_uniform_sgmm_lib.init_random(traj_tensor,self.n_clusters)
-                log_lik = torch_uniform_sgmm_lib.uniform_sgmm_log_likelihood(traj_tensor,init_clusters,device=self.device).cpu().numpy()
+                log_lik = torch_uniform_sgmm_lib.uniform_sgmm_log_likelihood(traj_tensor,init_clusters,dtype=self.dtype, device=self.device).cpu().numpy()
                 if (i==0 or log_lik > max_log_lik):
                     max_log_lik = log_lik
                     self.clusters = init_clusters
