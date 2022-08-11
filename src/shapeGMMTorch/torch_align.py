@@ -6,7 +6,7 @@ def torch_remove_center_of_geometry(traj_tensor, dtype=torch.float32, device=tor
     # meta data
     n_frames = traj_tensor.shape[0]
     # compute geometric center of each frame
-    cog = torch.mean(traj_tensor.to(torch.float64),1,False)
+    cog = torch.mean(traj_tensor,1,False)
     # substract from each frame
     for i in range(n_frames):
         traj_tensor[i] -= cog[i]
@@ -14,7 +14,7 @@ def torch_remove_center_of_geometry(traj_tensor, dtype=torch.float32, device=tor
     del cog
     torch.cuda.empty_cache()
 
-def torch_sd(traj_tensor, ref_tensor):
+def torch_sd(traj_tensor, ref_tensor, dtype=torch.float32):
     # meta data
     n_atoms = traj_tensor.shape[1]
     # compute correlation matrices using batched matmul
@@ -30,7 +30,7 @@ def torch_sd(traj_tensor, ref_tensor):
     # do rotation
     traj_tensor = torch.matmul(traj_tensor,rot_mat)
     disp = (traj_tensor - ref_tensor).to(torch.float64)
-    sd = torch.matmul(disp.view(-1,1,n_atoms*3),disp.view(-1,n_atoms*3,1))[:,0,0]
+    sd = torch.matmul(disp.view(-1,1,n_atoms*3),disp.view(-1,n_atoms*3,1))[:,0,0].to(dtype)
     return sd
     # free up local variables 
     del c_mats
