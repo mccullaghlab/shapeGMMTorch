@@ -7,9 +7,6 @@ import random
 from . import torch_align
 from . import torch_uniform_sgmm_lib
 from . import torch_kronecker_sgmm_lib
-#import torch_align
-#import torch_uniform_sgmm_lib
-#import torch_kronecker_sgmm_lib
 
 # class
 class ShapeGMMTorch:
@@ -21,7 +18,7 @@ class ShapeGMMTorch:
     Author: Martin McCullagh
     Date: 8/9/2022
     """
-    def __init__(self, n_clusters, log_thresh=1E-3, max_steps=200, covar_type="uniform", init_cluster_method="random", init_iter=5, kabsch_thresh=1E-1, kabsch_max_steps=500, dtype=torch.float32, device=torch.device("cuda:0"), verbose=False):
+    def __init__(self, n_clusters, log_thresh=1E-3, max_steps=200, covar_type="uniform", init_cluster_method="random", sort = True, kabsch_thresh=1E-1, kabsch_max_steps=500, dtype=torch.float32, device=torch.device("cuda:0"), verbose=False):
         """
         Initialize size-and-shape GMM.
         n_clusters (required)   - integer number of clusters must be input
@@ -29,7 +26,7 @@ class ShapeGMMTorch:
         max_steps               - integer maximum number of steps that the GMM procedure will do.  Default is 200.
         covar_type              - string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'uniform'.
         init_cluster_method     - string dictating how to initialize clusters.  Understood values are 'chunk', 'read' and 'random'.  Default is 'random'.
-        init_iter               - integer dictating number of iterations done to initialize for 'random'.  Default is 5.
+        sort                    - boolean dictating whether or not the object by cluster population after fitting.  Default is True.
         kabsch_thresh           - float dictating convergence criteria for each alignment step.  Default value is 1e-1.
         kabsch_max_steps        - integer dictating maximum number of allowed iterations in each alignment step. Default is 500.
         dtype                   - Data type to be used.  Default is torch.float32.
@@ -42,62 +39,30 @@ class ShapeGMMTorch:
         self.max_steps = max_steps                              # integer
         self.covar_type = covar_type                            # string
         self.init_cluster_method = init_cluster_method          # string
-        self.init_iter = init_iter                              # integer
+        self.sort = sort                                        # boolean
         self.kabsch_thresh = kabsch_thresh                      # float
         self.kabsch_max_steps = kabsch_max_steps                # integer
         self.dtype = dtype                                      # torch dtype
         self.device = device                                    # torch device
         self.verbose = verbose                                  # boolean
-        self.init_clusters_flag = False                         # boolean tracking if clusters have been initialized or not.
-        self.gmm_fit_flag = False                               # boolean tracking if GMM has been fit.
+        self._init_clusters_flag = False                        # boolean tracking if clusters have been initialized or not.
+        self._gmm_fit_flag = False                              # boolean tracking if GMM has been fit.
 
-    # initialize clusters
-    def init_clusters(self, traj_tensor, clusters=[]):
-        
-        # get metadata
-        self.n_frames = int(traj_tensor.shape[0])
-        self.n_atoms = traj_tensor.shape[1]
-        self.n_dim = traj_tensor.shape[2]
-        self.n_features = self.n_dim*self.n_atoms
-        if (self.verbose == True):
-            # print metadata to stdout
-            print("Number of frames being analyzed:", self.n_frames)
-            print("Number of particles being analyzed:", self.n_atoms)
-            print("Number of dimensions (must be 3):", self.n_dim)
-            print("Initializing clustering using method:", self.init_cluster_method)
-        # declare clusters
-        self.clusters = np.zeros(self.n_frames,dtype=np.int)
-
-        # Remove the center-of-geometry from entire trajectory
-        torch_align.torch_remove_center_of_geometry(traj_tensor)
-
-        # make initial clustering based on input user choice (default is random)
-        if (self.init_cluster_method == "chunk"):
-            for i in range(self.n_frames):
-                self.clusters[i] = i*self.n_clusters // self.n_frames
-        elif (self.init_cluster_method == "read"):
-            # should affirm that there are n_frames clusters
-            self.clusters = clusters
-        else: # default is random
-            for i in range(self.init_iter):
-                init_clusters = torch_uniform_sgmm_lib.init_random(traj_tensor,self.n_clusters)
-                log_lik = torch_uniform_sgmm_lib.uniform_sgmm_log_likelihood(traj_tensor,init_clusters,dtype=self.dtype, device=self.device).cpu().numpy()
-                if (i==0 or log_lik > max_log_lik):
-                    max_log_lik = log_lik
-                    self.clusters = init_clusters
-        # clusters have been initialized
-        self.init_clusters_flag = True
-        # 
-
-        
     # fit
     def fit(self, traj_data, clusters = []):
-        
+        """
+        Fit size-and-shape GMM using traj_data as the training data.
+        traj_data (required)   - (n_frames, n_atoms, 3) float32 or float64 numpy array of particle positions. 
+        clusters               - (n_frames) integer numpy array of initial cluster assignments.  
+
+        Returns an aligned trajectory, if requested.  Each cluster aligned to respective average.
+        """
+
         # pass trajectory data to device
         traj_tensor = torch.tensor(traj_data,dtype=self.dtype,device=self.device)
         # Initialize clusters if they have not been already
-        if (self.init_clusters_flag == False):
-            self.init_clusters(traj_tensor, clusters)
+        if (self._init_clusters_flag == False):
+            self._init_clusters(traj_tensor, clusters)
             
         # declare some important arrays for the model
         centers_tensor = torch.empty((self.n_clusters,self.n_atoms,self.n_dim),dtype=self.dtype,device=self.device)
@@ -125,11 +90,6 @@ class ShapeGMMTorch:
     
         # pass remaining data to device
         ln_weights_tensor = torch.tensor(np.log(self.weights),dtype=torch.float64,device=self.device)
-        
-        # Determine initial log likelihood
-        #if (self.verbose == True):
-        #    log_likelihood = torch_uniform_sgmm_lib.uniform_sgmm_log_likelihood(traj_tensor,self.clusters, thresh=self.kabsch_thresh, dtype=self.dtype, device=self.device)
-        #    print("Initial Uniform log likelihood:", log_likelihood.cpu().numpy())
         
         # perform Expectation Maximization
         delta_log_lik = 100.0 + self.log_thresh
@@ -170,14 +130,22 @@ class ShapeGMMTorch:
         
         # assign clusters based on largest likelihood 
         self.clusters = np.argmax(self.cluster_frame_ln_likelihoods, axis = 1)
-        # uniform has been performed
-        self.gmm_fit_flag = True
+        # sort object
+        if self.sort == True:
+            self._sort_clusters()
+        # SGMM fit has been performed
+        self._gmm_fit_flag = True
         # return aligned trajectory
         #return traj_data
 
     # predict clustering of provided data based on prefit parameters from fit_weighted
     def predict(self,traj_data):
-        if self.gmm_fit_flag == True:
+        """
+        Predict size-and-shape GMM using traj_data as prediction set and already fit object parameters.
+        traj_data (required)   - (n_frames, n_atoms, 3) float32 or float64 numpy array of particle positions. 
+        """
+
+        if self._gmm_fit_flag == True:
             # send data to device
             traj_tensor = torch.tensor(traj_data,dtype=self.dtype,device=self.device)
             centers_tensor = torch.tensor(self.centers,dtype=self.dtype,device=self.device)
@@ -221,30 +189,80 @@ class ShapeGMMTorch:
             torch.cuda.empty_cache()
         else:
             print("shapeGMM must be fit before it can predict.")
-#
-#    def predict_uniform(self,traj_data):
-#        if self.gmm_uniform_flag == True:
-#            # get metadata from trajectory data
-#            n_frames = traj_data.shape[0]
-#            # declare likelihood array
-#            cluster_frame_ln_likelihoods = np.empty((self.n_clusters,n_frames),dtype=np.float64)
-#            # make sure trajectory is centered
-#            traj_data = traj_tools.traj_remove_cog_translation(traj_data)
-#            # Expectation step
-#            for k in range(self.n_clusters):
-#                # align the entire trajectory to each cluster mean
-#                traj_data = traj_tools.traj_align(traj_data,self.centers[k])
-#                cluster_frame_ln_likelihoods[k,:] = gmm_shapes_uniform_library.ln_spherical_gaussian_pdf(traj_data.reshape(n_frames,self.n_features), self.centers[k].reshape(self.n_features), self.var[k])
-            # compute log likelihood
-#            log_likelihood = 0.0
-#            for i in range(n_frames):
-#                log_likelihood += gmm_shapes_uniform_library.logsumexp(cluster_frame_ln_likelihoods[:,i] + self.ln_weights)
-            # assign clusters based on largest likelihood (probability density)
-#            clusters = np.argmax(cluster_frame_ln_likelihoods, axis = 0)
-            # center trajectory around averages
-#            for k in range(self.n_clusters):
-#                indeces = np.argwhere(clusters == k).flatten()
-#                traj_data[indeces] = traj_tools.traj_align(traj_data[indeces],self.centers[k])
-#            return clusters, traj_data, log_likelihood
-#        else:
-#            print("Uniform shape-GMM must be fitted before you can predict.")
+
+    # initialize clusters
+    def _init_clusters(self, traj_tensor, clusters=[]):
+        
+        # get metadata
+        self.n_frames = int(traj_tensor.shape[0])
+        self.n_atoms = traj_tensor.shape[1]
+        self.n_dim = traj_tensor.shape[2]
+        self.n_features = self.n_dim*self.n_atoms
+        if (self.verbose == True):
+            # print metadata to stdout
+            print("Number of frames being analyzed:", self.n_frames)
+            print("Number of particles being analyzed:", self.n_atoms)
+            print("Number of dimensions (must be 3):", self.n_dim)
+            print("Initializing clustering using method:", self.init_cluster_method)
+        # declare clusters
+        self.clusters = np.zeros(self.n_frames,dtype=np.int)
+
+        # Remove the center-of-geometry from entire trajectory
+        torch_align.torch_remove_center_of_geometry(traj_tensor)
+
+        # make initial clustering based on input user choice (default is random)
+        if (self.init_cluster_method == "chunk"):
+            for i in range(self.n_frames):
+                self.clusters[i] = i*self.n_clusters // self.n_frames
+        elif (self.init_cluster_method == "read"):
+            # should affirm that there are n_frames clusters
+            self.clusters = clusters
+        else: # default is random
+            self.clusters = torch_uniform_sgmm_lib.init_random(traj_tensor,self.n_clusters)
+            #log_lik = torch_uniform_sgmm_lib.uniform_sgmm_log_likelihood(traj_tensor,self.clusters,device=self.device).cpu().numpy()
+        # clusters have been initialized
+        self._init_clusters_flag = True
+
+    # align the trajectory and averages
+    def _align_clusters(self, traj_tensor):
+        if self._gmm_fit_flag == True:
+            # alignment is different for different covar_type
+            if covar_type=="uniform":
+                # start by determing a global average 
+                self.global_center, self.global_var = torch_align.torch_iterative_align_uniform(traj_tensor, dtype=self.dtype, device=self.device)[1:]
+                # align centers to global average
+                self.centers = torch_align.torch_align_uniform(self.centers, self.global_center)
+                # align each cluster to its average
+                for k in range(self.n_clusters):
+                    indeces = np.argwhere(self.clusters == k).flatten()
+                    traj_tensor[indeces] = torch_align.torch_align_uniform(traj_tensor[indeces], self.centers[k])
+            else: # kronecker
+                # start by determing a global average 
+                self.global_center, self.global_precision = torch_align.torch_iterative_align_kronecker(traj_tensor, dtype=self.dtype, device=self.device)[1:3]
+                # align centers to global average (NxN covars/precisions are rotationally invariant so don't need to rotate them)
+                self.centers = torch_align.torch_align_kronecker(self.centers, self.global_center, self.global_precision, dtype=self.dtype, device=self.device)
+                # align each cluster to its average
+                for k in range(self.n_clusters):
+                    indeces = np.argwhere(self.clusters == k).flatten()
+                    traj_tensor[indeces] = torch_align.torch_align_kronecker(traj_tensor[indeces], self.centers[k], self.precisions[k], dtype=self.dtype, device=self.device)
+            return traj_tensor.cpu().numpy()
+        else:
+            print("shapeGMM must be fit before it can be aligned.")
+
+    # sort the object based on cluster weights
+    def _sort_object(self):
+        if self._gmm_fit_flag == True:
+            # determine sort key
+            sort_key = np.argsort(self.weights)[::-1]
+            sorted_cluster_ids = cluster_ids[sort_key]
+            new_clusters = np.empty(n_frames,dtype=int)
+            for frame in range(n_frames):
+                new_clusters[frame] = np.argwhere(sorted_cluster_ids == sgmm_obj.clusters[frame])
+            # repopulate object
+            self.precisions = self.precisions[sort_key]
+            self.lpdets     = self.lpdets[sort_key]
+            self.centers    = self.centers[sort_key]
+            self.weights    = self.weights[sort_key]
+            self.clusters   = new_clusters
+        else:
+            print("shapeGMM must be fit before it can be sorted.")

@@ -30,7 +30,7 @@ def uniform_sgmm_log_likelihood(traj_tensor, clusters, thresh=1e-3, dtype=torch.
         # determine center and variance of cluster using iterative alignment
         center, var = torch_align.torch_iterative_align_uniform(traj_tensor[indeces], thresh=thresh, dtype=dtype, device=device)[1:]
         # compute log likelihood
-        cluster_frame_ln_likelihoods[:,k] = torch_align.torch_sd(traj_tensor,center,dtype=torch.float64)
+        cluster_frame_ln_likelihoods[:,k] = torch_align.torch_sd(traj_tensor,center)
         # divide be variance and normalize
         cluster_frame_ln_likelihoods[:,k] *= -0.5/var
         cluster_frame_ln_likelihoods[:,k] -= 1.5*(n_atoms-1)*torch.log(var)
@@ -59,7 +59,7 @@ def init_random(traj_tensor, n_clusters, dtype=torch.float32, device=torch.devic
         # make initial clustering based on SD distance from centers
         # measure distance to every center
         for k in range(n_clusters):
-            dists[:,k] = torch_align.torch_sd(traj_tensor, centers[k], dtype=dtype)
+            dists[:,k] = torch_align.torch_sd(traj_tensor, centers[k])
         # assign frame to nearest center
         clusters = torch.argmin(dists, dim = 1).cpu().numpy()
         # make sure there are at least n_atoms frames in each cluster for (co)variance determination
@@ -116,7 +116,7 @@ def torch_sgmm_expectation_uniform(traj_tensor, centers_tensor, vars_tensor, dev
     # compute likelihood of each frame at each Gaussian
     for k in range(n_clusters):
         # Determine square deviation of each frame aligned to each mean
-        cluster_frame_ln_likelihoods[:,k] = torch_align.torch_sd(traj_tensor,centers_tensor[k], dtype=torch.float64)
+        cluster_frame_ln_likelihoods[:,k] = torch_align.torch_sd(traj_tensor,centers_tensor[k])
         # divide be variance and normalize
         cluster_frame_ln_likelihoods[:,k] *= -0.5/vars_tensor[k]
         cluster_frame_ln_likelihoods[:,k] -= 1.5*(n_atoms-1)*torch.log(vars_tensor[k])

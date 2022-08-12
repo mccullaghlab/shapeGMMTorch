@@ -4,9 +4,19 @@
 
 This is a package to perform Gaussian Mixture Model (GMM) clustering on particle positions (in <img src="https://render.githubusercontent.com/render/math?math=\mathbb{R}^3">). Like other GMM schemes, the user must specify the number of clusters and a cluster initialization scheme (defaults to random).  This is specified in the object initialization line, analagous to how it is done for the sklearn GaussianMixture package.  There are two choices for the form of the covariance  specified by the `covar_type` keyword in the object initialization.  See paper (Klem et al JCTC 2022, https://pubs.acs.org/doi/abs/10.1021/acs.jctc.1c01290) for additional details.
 
+## Dependencies
+
+This package is dependent on the following packages:
+
+1. numpy
+2. torch==1.11
+3. torch_batch_svd  available from https://github.com/KinglittleQ/torch-batch-svd
+
+The last package is for the SVD part of the alignment and is much faster than the native batch torch library.  It is, however, not compatible with the current version of torch (1.12) thus the requirement of torch 1.11.
+
 ## Installation
 
-The package can be installed by downloading and then running
+After the dependencies have been installed, the package can be installed by downloading and then running
 
 `python setup.py install`
 
