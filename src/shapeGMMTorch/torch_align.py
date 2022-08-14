@@ -3,6 +3,7 @@
 # import libraries
 import numpy as np
 import torch
+import importlib
 # check to see if fast SVD library is available
 svd_loader = importlib.util.find_spec('torch_bath_svd')
 if svd_loader is not None:
