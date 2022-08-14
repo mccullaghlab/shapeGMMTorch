@@ -2,7 +2,7 @@ import numpy as np
 import time
 from . import torch_sgmm
 
-def weighted_cross_validate_cluster_scan(traj_data, n_train_frames, cluster_array = np.arange(2,9,1).astype(int), n_training_sets=10, n_attempts = 5):
+def cross_validate_cluster_scan(traj_data, n_train_frames, covar_type="kronecker", cluster_array = np.arange(2,9,1).astype(int), n_training_sets=10, n_attempts = 5):
     """
     perform cross validation weighted shape-GMM for range of cluster sizes
     Inputs:
@@ -45,7 +45,7 @@ def weighted_cross_validate_cluster_scan(traj_data, n_train_frames, cluster_arra
             # for each n_clusters and training set, perform shape-GMM n_attempts times and take object with largest log likelihood
             for attempt in range(n_attempts):
                 start_time = time.process_time()
-                wsgmm = torch_sgmm.ShapeGMMTorch(cluster_size, covar_type='kronecker', kabsch_thresh=1e-1,init_cluster_method='random',init_iter=5, dtype=torch.float64, device=torch.device("cuda:0"))
+                wsgmm = torch_sgmm.ShapeGMMTorch(cluster_size, covar_type=covar_type)
                 wsgmm.fit(train_data)
                 w_log_lik.append(wsgmm.log_likelihood)
                 w_objs.append(wsgmm)
