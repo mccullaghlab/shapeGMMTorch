@@ -38,9 +38,9 @@ Weighted (Kronecker product) covariance:
 
 ### Fit:
 
-`usgmm.fit(training_set_positions)`
+`uniform_aligned_trajectory = usgmm.fit(training_set_positions)`
 
-`wsgmm.fit(training_set_positions)`
+`kronecker_aligned_trajectory = wsgmm.fit(training_set_positions)`
 
 ### Predict:
 
@@ -51,15 +51,15 @@ Weighted (Kronecker product) covariance:
 
 ## Options
 
-        - `n_clusters` (required)   - integer number of clusters must be input
-        - `log_thresh`              - float threshold in log likelihood difference to determine convergence. Default value is 1e-3.
-        - `max_steps`               - integer maximum number of steps that the GMM procedure will do.  Default is 200.
-        - `covar_type`              - string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'uniform'.
-        - `init_cluster_method`     - string dictating how to initialize clusters.  Understood values are 'chunk', 'read' and 'random'.  Default is 'random'.
-        - `sort`                    - boolean dictating whether or not the object by cluster population after fitting.  Default is True.
-        - `kabsch_thresh`           - float dictating convergence criteria for each alignment step.  Default value is 1e-1.
-        - `kabsch_max_steps`        - integer dictating maximum number of allowed iterations in each alignment step. Default is 500.
-        - `dtype`                   - Data type to be used.  Default is torch.float32.
+        - n_clusters (required)   - integer number of clusters must be input
+        - log_thresh              - float threshold in log likelihood difference to determine convergence. Default value is 1e-3.
+        - max_steps               - integer maximum number of steps that the GMM procedure will do.  Default is 200.
+        - covar_type              - string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'uniform'.
+        - init_cluster_method     - string dictating how to initialize clusters.  Understood values are 'chunk', 'read' and 'random'.  Default is 'random'.
+        - sort                    - boolean dictating whether or not the object by cluster population after fitting.  Default is True.
+        - kabsch_thresh           - float dictating convergence criteria for each alignment step.  Default value is 1e-1.
+        - kabsch_max_steps        - integer dictating maximum number of allowed iterations in each alignment step. Default is 500.
+        - dtype                   - Data type to be used.  Default is torch.float32.
         - device                  - device to be used.  Default is torch.device('cuda:0') device.
         - verbose                 - boolean dictating whether to print various things at every step. Defulat is False.
 
