@@ -37,21 +37,6 @@ Weighted (Kronecker product) covariance:
 
 `wsgmm = torch_sgmm.ShapeGMMTorch(n_clusters, covar_type = 'kronecker', verbose=True)`
 
-### Fit:
-
-`uniform_aligned_trajectory = usgmm.fit(training_set_positions)`
-
-`kronecker_aligned_trajectory = wsgmm.fit(training_set_positions)`
-
-### Predict:
-
-
-`clusters, aligned_traj, log_likelihood = usgmm.predict(full_trajectory_positions)`
-
-`clusters, aligned_traj, log_likelihood = wsgmm.predict(full_trajectory_positions)`
-
-## Options
-
 During initialization, the following options are availble:
 
         - n_clusters (required)   - integer number of clusters must be input
@@ -65,6 +50,40 @@ During initialization, the following options are availble:
         - dtype                   - Torch data type to be used.  Default is torch.float32.
         - device                  - Torch device to be used.  Default is torch.device('cuda:0') device.
         - verbose                 - boolean dictating whether to print various things at every step. Defualt is False.
+
+### Fit:
+
+`uniform_aligned_trajectory = usgmm.fit(training_set_positions)`
+
+`kronecker_aligned_trajectory = wsgmm.fit(training_set_positions)`
+
+### Predict:
+
+
+`clusters, aligned_traj, log_likelihood = usgmm.predict(full_trajectory_positions)`
+
+`clusters, aligned_traj, log_likelihood = wsgmm.predict(full_trajectory_positions)`
+
+## Attributes
+
+After being properly fit, a shapeGMM object will have the following attributes:
+
+        - n_clusters		- integer of how many clusters were used in training
+        - n_atoms           	- integer of how many atoms were in the training data
+        - clusters              - integer array of cluster ids for training data
+        - log_likelihood        - float log likelihood of training set
+        - weights               - `(n_clusters)` float array of cluster weights
+	- centers	      	- `(n_clusters, n_atoms, 3)` float array of cluster centers/averages
+
+Uniform covariance specific attributes
+
+	- vars		       	- `(n_clusters)` float array of cluster variances
+
+Kronecker covariance specific attributes
+
+	- precisions	   	- `(n_clusters, n_atoms, n_atoms)` float array of cluster precisions (inverse covariances)
+Uniform (spherical, uncorrelated) specific attributes
+	- lpdets	    	- `(n_clusters)` float array of ln(det(covar))
 
 ## Description of Contents
 
