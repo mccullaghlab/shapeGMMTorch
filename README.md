@@ -68,21 +68,20 @@ During initialization, the following options are availble:
 
 After being properly fit, a shapeGMM object will have the following attributes:
 
-        - n_clusters		- integer of how many clusters were used in training
-        - n_atoms           	- integer of how many atoms were in the training data
-        - clusters              - integer array of cluster ids for training data
-        - log_likelihood        - float log likelihood of training set
-        - weights               - `(n_clusters)` float array of cluster weights
-	- centers	      	- `(n_clusters, n_atoms, 3)` float array of cluster centers/averages
+	- n_clusters		- integer of how many clusters were used in training
+	- n_atoms           	- integer of how many atoms were in the training data
+	- clusters              - integer array of cluster ids for training data
+	- log_likelihood        - float log likelihood of training set
+	- weights               - (n_clusters) float array of cluster weights
+	- centers	      	- (n_clusters, n_atoms, 3) float array of cluster centers/averages
 
 Uniform covariance specific attributes
 
-	- vars		       	- `(n_clusters)` float array of cluster variances
+	- vars		       	- (n_clusters) float array of cluster variances
 
 Kronecker covariance specific attributes
 
-	- precisions	   	- `(n_clusters, n_atoms, n_atoms)` float array of cluster precisions (inverse covariances)
-Uniform (spherical, uncorrelated) specific attributes
+	- precisions	   	- (n_clusters, n_atoms, n_atoms) float array of cluster precisions (inverse covariances)
 	- lpdets	    	- `(n_clusters)` float array of ln(det(covar))
 
 ## Description of Contents
