@@ -1,17 +1,21 @@
 import numpy as np
 import time
 import sys
+import torch
 from . import torch_sgmm
 
-def cross_validate_cluster_scan(traj_data, n_train_frames, covar_type="kronecker", cluster_array = np.arange(2,9,1).astype(int), n_training_sets=10, n_attempts = 5):
+def cross_validate_cluster_scan(traj_data, n_train_frames, covar_type="kronecker", cluster_array = np.arange(2,9,1).astype(int), n_training_sets=10, n_attempts = 5, dtype=torch.float32, device=torch.device("cuda:0")):
     """
     perform cross validation weighted shape-GMM for range of cluster sizes
     Inputs:
-        traj_data                  (required)  : float64 array with dimensions (n_frames, n_atoms,3) of molecular configurations
-        n_train_frames             (required)  : int     scalar dictating number of frames to use as training (rest is used for CV)
-        cluster_array       (default: [2..8])  : int     array of cluster sizes - can be of any number but must be ints. Default is [2, 3, 4, 5, 6, 7, 8]
-        n_training_sets         (default: 10)  : int     scalar dictating how many training sets to choose. Default is 10
-        n_attempts               (default: 5)  : int     scalar dictating how many attempts to perform shape-GMM on same set.  Default is 5
+        traj_data                    (required)  : float64 array with dimensions (n_frames, n_atoms,3) of molecular configurations
+        n_train_frames               (required)  : int     scalar dictating number of frames to use as training (rest is used for CV)
+        covar_type         (default "kronecker") : string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'uniform'.
+        cluster_array         (default: [2..8])  : int     array of cluster sizes - can be of any number but must be ints. Default is [2, 3, 4, 5, 6, 7, 8]
+        n_training_sets           (default: 10)  : int     scalar dictating how many training sets to choose. Default is 10
+        n_attempts                 (default: 5)  : int     scalar dictating how many attempts to perform shape-GMM on same set.  Default is 5
+        dtype          (default: torch.float32)  : torch data type for trajectory and centers
+        device (default: torch.device("cuda:0")  : torch data type for trajectory and centers
     Returns:
         weighted_train_log_lik                 : float64 array with dimensions (n_clusters, n_training_sets) containing log likelihoods for each training set
         weighted_predict_log_lik               : float64 array with dimensions (n_clusters, n_training_sets) containing log likelihoods on each CV set
@@ -46,7 +50,7 @@ def cross_validate_cluster_scan(traj_data, n_train_frames, covar_type="kronecker
             # for each n_clusters and training set, perform shape-GMM n_attempts times and take object with largest log likelihood
             for attempt in range(n_attempts):
                 start_time = time.process_time()
-                wsgmm = torch_sgmm.ShapeGMMTorch(cluster_size, covar_type=covar_type)
+                wsgmm = torch_sgmm.ShapeGMMTorch(cluster_size, covar_type=covar_type, dtype=dtype, device=device)
                 wsgmm.fit(train_data)
                 w_log_lik.append(wsgmm.log_likelihood)
                 w_objs.append(wsgmm)

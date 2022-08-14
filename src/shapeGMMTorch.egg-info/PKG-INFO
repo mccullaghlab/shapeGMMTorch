@@ -29,6 +29,7 @@ Description: # shapeGMMTorch
         1. MDAnalysis
         2. matplotlib
         3. pyemma
+        4. shapeGMM
         
         ## Installation
         
@@ -54,17 +55,16 @@ Description: # shapeGMMTorch
         
         During initialization, the following options are availble:
         
-                - n_clusters (required)   - integer number of clusters must be input
-                - log_thresh              - float threshold in log likelihood difference to determine convergence. Default value is 1e-3.
-                - max_steps               - integer maximum number of steps that the GMM procedure will do.  Default is 200.
-                - covar_type              - string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'uniform'.
-                - init_cluster_method     - string dictating how to initialize clusters.  Understood values are 'chunk', 'read' and 'random'.  Default is 'random'.
-                - sort                    - boolean dictating whether to sort the object by cluster population after fitting.  Default is True.
-                - kabsch_thresh           - float dictating convergence criteria for each iterative alignment (Maximization step).  Default value is 1e-1.
-                - kabsch_max_steps        - integer dictating maximum number of allowed iterations in each alignment step. Default is 500.
-                - dtype                   - Torch data type to be used.  Default is torch.float32.
-                - device                  - Torch device to be used.  Default is torch.device('cuda:0') device.
-                - verbose                 - boolean dictating whether to print various things at every step. Defualt is False.
+        	- n_clusters (required)   - integer number of clusters must be input
+        	- covar_type              - string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'uniform'.
+        	- log_thresh              - float threshold in log likelihood difference to determine convergence. Default value is 1e-3.
+        	- max_steps               - integer maximum number of steps that the GMM procedure will do.  Default is 200.
+        	- init_cluster_method     - string dictating how to initialize clusters.  Understood values are 'chunk', 'read' and 'random'.  Default is 'random'.
+        	- sort                    - boolean dictating whether to sort the object by cluster population after fitting.  Default is True.
+        	- kabsch_thresh           - float dictating convergence criteria for each iterative alignment (Maximization step).  Default value is 1e-1.
+        	- dtype                   - Torch data type to be used.  Default is torch.float32.
+        	- device                  - Torch device to be used.  Default is torch.device('cuda:0') device.
+        	- verbose                 - boolean dictating whether to print various things at every step. Defualt is False.
         
         ### Fit:
         
@@ -99,9 +99,6 @@ Description: # shapeGMMTorch
         	- precisions	   	- (n_clusters, n_atoms, n_atoms) float array of cluster precisions (inverse covariances)
         	- lpdets	    	- (n_clusters) float array of ln(det(covar))
         
-        ## Description of Contents
-        
-        ## Test Cases
         
         
 Platform: UNKNOWN

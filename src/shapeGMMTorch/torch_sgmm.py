@@ -115,10 +115,10 @@ class ShapeGMMTorch:
         # uniform/weighted specific variables
         if self.covar_type == 'uniform': 
             traj_data, self.centers = self._align_clusters_uniform(traj_tensor,centers_tensor)
-            self.cluster_frame_ln_likelihoods =  torch_uniform_sgmm_lib.torch_sgmm_expectation_uniform(traj_tensor, centers_tensor, vars_tensor, dtype=self.dtype, device=self.device).cpu().numpy()
+            self.cluster_frame_ln_likelihoods =  torch_uniform_sgmm_lib.torch_sgmm_expectation_uniform(traj_tensor, centers_tensor, vars_tensor, device=self.device).cpu().numpy()
             self.vars = vars_tensor.cpu().numpy()
             del vars_tensor
-        else: # assume weighted
+        else: # assume Kronecker product covariance
             traj_data, self.centers = self._align_clusters_kronecker(traj_tensor,centers_tensor, precisions_tensor)
             self.cluster_frame_ln_likelihoods =  torch_kronecker_sgmm_lib.torch_sgmm_expectation_kronecker(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, dtype=self.dtype, device=self.device).cpu().numpy()
             self.precisions = precisions_tensor.cpu().numpy()
@@ -168,7 +168,7 @@ class ShapeGMMTorch:
             torch_align.torch_remove_center_of_geometry(traj_tensor,dtype=self.dtype,device=self.device)
             # Expectation step
             if self.covar_type == 'uniform': 
-                cluster_frame_ln_likelihoods_tensor =  torch_uniform_sgmm_lib.torch_sgmm_expectation_uniform(traj_tensor, centers_tensor, vars_tensor, dtype=self.dtype, device=self.device)
+                cluster_frame_ln_likelihoods_tensor =  torch_uniform_sgmm_lib.torch_sgmm_expectation_uniform(traj_tensor, centers_tensor, vars_tensor, device=self.device)
             else: # assume weighted
                 cluster_frame_ln_likelihoods_tensor = torch_kronecker_sgmm_lib.torch_sgmm_expectation_kronecker(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, dtype=self.dtype, device=self.device)
             for k in range(self.n_clusters):
@@ -276,7 +276,7 @@ class ShapeGMMTorch:
             self.weights    = self.weights[sort_key]
             self.clusters   = new_clusters
             if self.covar_type == "uniform":
-                self.vars = sel.vars[sort_key]
+                self.vars = self.vars[sort_key]
             else:
                 self.precisions = self.precisions[sort_key]
                 self.lpdets     = self.lpdets[sort_key]
