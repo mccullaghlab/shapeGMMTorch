@@ -82,7 +82,7 @@ Uniform covariance specific attributes
 Kronecker covariance specific attributes
 
 	- precisions	   	- (n_clusters, n_atoms, n_atoms) float array of cluster precisions (inverse covariances)
-	- lpdets	    	- `(n_clusters)` float array of ln(det(covar))
+	- lpdets	    	- (n_clusters) float array of ln(det(covar))
 
 ## Description of Contents
 
