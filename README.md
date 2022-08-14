@@ -15,6 +15,12 @@ This package is dependent on the following packages:
 
 The last package is for the SVD part of the alignment and is much faster than the native batch torch library.  It is, however, not compatible with the current version of torch (1.12) thus the requirement of torch 1.11.
 
+The examples are also dependent on:
+
+1. MDAnalysis
+2. matplotlib
+3. pyemma
+
 ## Installation
 
 After the dependencies have been installed, the package can be installed by downloading and then running
