@@ -1,8 +1,8 @@
 README.md
 setup.py
 src/shapeGMMTorch/__init__.py
+src/shapeGMMTorch/scripts.py
 src/shapeGMMTorch/torch_align.py
-src/shapeGMMTorch/torch_align_to_cpu.py
 src/shapeGMMTorch/torch_kronecker_sgmm_lib.py
 src/shapeGMMTorch/torch_sgmm.py
 src/shapeGMMTorch/torch_uniform_sgmm_lib.py
