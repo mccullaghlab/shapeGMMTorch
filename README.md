@@ -49,6 +49,8 @@ Weighted (Kronecker product) covariance:
 
 `clusters, aligned_traj, log_likelihood = wsgmm.predict(full_trajectory_positions)`
 
+## Options
+
 ## Description of Contents
 
 ## Test Cases

@@ -48,7 +48,7 @@ class ShapeGMMTorch:
         self._init_clusters_flag = False                        # boolean tracking if clusters have been initialized or not.
         self._gmm_fit_flag = False                              # boolean tracking if GMM has been fit.
 
-    # fit
+    # fit the model
     def fit(self, traj_data, clusters = []):
         """
         Fit size-and-shape GMM using traj_data as the training data.
@@ -112,6 +112,7 @@ class ShapeGMMTorch:
         self.weights = torch.exp(ln_weights_tensor).cpu().numpy()
         self.centers = centers_tensor.cpu().numpy()
         self.log_likelihood = log_likelihood.cpu().numpy()
+        traj_data = self._align_clusters(traj_tensor)
         # uniform/weighted specific variables
         if self.covar_type == 'uniform': 
             self.cluster_frame_ln_likelihoods =  torch_uniform_sgmm_lib.torch_sgmm_expectation_uniform(traj_tensor, centers_tensor, vars_tensor, dtype=self.dtype, device=self.device).cpu().numpy()
@@ -136,13 +137,18 @@ class ShapeGMMTorch:
         # SGMM fit has been performed
         self._gmm_fit_flag = True
         # return aligned trajectory
-        #return traj_data
+        return traj_data
 
     # predict clustering of provided data based on prefit parameters from fit_weighted
     def predict(self,traj_data):
         """
         Predict size-and-shape GMM using traj_data as prediction set and already fit object parameters.
         traj_data (required)   - (n_frames, n_atoms, 3) float32 or float64 numpy array of particle positions. 
+
+        Returns:
+        cluster ids             - (n_frames) int array
+        aligned trajectory      - (n_frames, n_atoms, 3) float32 or float64 numpy array of particle positions. 
+        log likelihood          - float64 scalar of the log likelihood of the data given the fit model
         """
 
         if self._gmm_fit_flag == True:
@@ -172,11 +178,6 @@ class ShapeGMMTorch:
             log_likelihood = torch.mean(log_norm).cpu().numpy()
             # assign clusters based on largest likelihood (probability density)
             clusters = torch.argmax(cluster_frame_ln_likelihoods_tensor, dim = 0).cpu().numpy()
-            # center trajectory around averages
-            for k in range(self.n_clusters):
-                indeces = np.argwhere(clusters == k).flatten()
-                #traj_data[indeces] = #traj_tools.traj_align_weighted_kabsch(traj_data[indeces],self.centers[k],self.precisions[k])
-            return clusters, traj_data, log_likelihood
             # delete data from gpu
             del traj_tensor
             del ln_weights_tensor
@@ -187,6 +188,8 @@ class ShapeGMMTorch:
                 del precisions_tensor 
                 del lpdets_tensor 
             torch.cuda.empty_cache()
+            # return values
+            return clusters, traj_data, log_likelihood
         else:
             print("shapeGMM must be fit before it can predict.")
 

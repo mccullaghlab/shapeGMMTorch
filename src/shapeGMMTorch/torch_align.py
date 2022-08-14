@@ -1,7 +1,46 @@
+# library of trajectory alignment protocols using PyTorch
+
+# import libraries
 import numpy as np
 import torch
-from torch_batch_svd import svd
+# check to see if fast SVD library is available
+svd_loader = importlib.util.find_spec('torch_bath_svd')
+if svd_loader is not None:
+    from torch_batch_svd import svd
+    def torch_align_rot_mat(traj_tensor, ref_tensor):
+        # compute correlation matrices using batched matmul
+        c_mats = torch.matmul(ref_tensor.T,traj_tensor)
+        # perfrom SVD of c_mats using batched SVD
+        u, s, v = svd(c_mats)
+        # ensure true rotation by correcting sign of determinant
+        prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
+        u[:,:,-1] *= prod_dets.view(-1,1)
+        # free up local variables
+        del c_mats
+        del s
+        del prod_dets
+        torch.cuda.empty_cache()
+        # return rotation matrices
+        return torch.matmul(v,torch.transpose(u,1,2))
+# otherwise use PyTorch native SVD
+else:
+    def torch_align_rot_mat(traj_tensor, ref_tensor):
+        # compute correlation matrices using batched matmul
+        c_mats = torch.matmul(ref_tensor.T,traj_tensor)
+        # perfrom SVD of c_mats using batched SVD
+        u, s, v = torch.linalg.svd(c_mats)
+        # ensure true rotation by correcting sign of determinant
+        prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
+        u[:,:,-1] *= prod_dets.view(-1,1)
+        # free up local variables
+        del c_mats
+        del s
+        del prod_dets
+        torch.cuda.empty_cache()
+        # return rotation matrices
+        return torch.transpose(torch.matmul(u,v),1,2)
 
+# remove center-of-geometry from trajectory
 def torch_remove_center_of_geometry(traj_tensor, dtype=torch.float32, device=torch.device("cuda:0")):
     # meta data
     n_frames = traj_tensor.shape[0]
@@ -14,60 +53,36 @@ def torch_remove_center_of_geometry(traj_tensor, dtype=torch.float32, device=tor
     del cog
     torch.cuda.empty_cache()
 
+# compute the squared displacement (sq) between trajectory frames and reference after uniform alignment
 def torch_sd(traj_tensor, ref_tensor, dtype=torch.float64):
     # meta data
     n_atoms = traj_tensor.shape[1]
-    # compute correlation matrices using batched matmul
-    c_mats = torch.matmul(ref_tensor.T,traj_tensor)
-    # perfrom SVD of c_mats using batched SVD
-    u, s, v = svd(c_mats)
-    #u, s, v = torch.linalg.svd(c_mats)
-    # ensure true rotation by correcting sign of determinant
-    prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
-    u[:,:,-1] *= prod_dets.view(-1,1)
-    rot_mat = torch.matmul(v,torch.transpose(u,1,2))
-    #rot_mat = torch.transpose(torch.matmul(u,v),1,2)
+    # get rotation matrices
+    rot_mat = torch_align_rot_mat(traj_tensor, ref_tensor)
     # do rotation
     traj_tensor = torch.matmul(traj_tensor,rot_mat)
     disp = (traj_tensor - ref_tensor).to(torch.float64)
     sd = torch.matmul(disp.view(-1,1,n_atoms*3),disp.view(-1,n_atoms*3,1))[:,0,0].to(dtype)
-    return sd
     # free up local variables 
-    del c_mats
-    del u
-    del s
-    del v
-    del prod_dets
     del rot_mat
     del disp
     torch.cuda.empty_cache()    
+    # return values
+    return sd
     
-
+# perform uniform Kabsch alignment between trajectory frames and reference
 def torch_align_uniform(traj_tensor, ref_tensor):
 
-    # compute correlation matrices using batched matmul
-    c_mats = torch.matmul(ref_tensor.T,traj_tensor)
-    # perfrom SVD of c_mats using batched SVD
-    u, s, v = svd(c_mats)
-    #u, s, v = torch.linalg.svd(c_mats)
-    # ensure true rotation by correcting sign of determinant
-    prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
-    u[:,:,-1] *= prod_dets.view(-1,1)
-    rot_mat = torch.matmul(v,torch.transpose(u,1,2))
-    #rot_mat = torch.transpose(torch.matmul(u,v),1,2)
+    # get rotation matrices
+    rot_mat = torch_align_rot_mat(traj_tensor, ref_tensor)
     # do rotation
     traj_tensor = torch.matmul(traj_tensor,rot_mat)
-    return traj_tensor
-    # free up local variables 
-    del c_mats
-    del u
-    del s
-    del v
-    del prod_dets
+    # delete local variables
     del rot_mat
     torch.cuda.empty_cache()
+    return traj_tensor
 
-
+# compute the log likelihood of uniform Kabsch alignment 
 def _torch_uniform_log_likelihood(disp, n_frames, n_atoms, var_norm, log_lik_prefactor):
     # reshape displacement 
     disp = disp.view(n_frames*n_atoms*3,1)
@@ -78,11 +93,11 @@ def _torch_uniform_log_likelihood(disp, n_frames, n_atoms, var_norm, log_lik_pre
     log_lik = log_lik_prefactor*(torch.log(var) + 1)
     return log_lik, var
 
+# Perform iterative Kabsch alignment to compute aligned trajectory, average and variance
 def torch_iterative_align_uniform(traj_tensor, dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-3, verbose=False):
     # meta data
     n_frames = traj_tensor.shape[0]
     n_atoms = traj_tensor.shape[1]
-    
     # initialize with average as the first frame (arbitrary choice)
     avg = traj_tensor[0]
     # setup some stuff
@@ -92,16 +107,8 @@ def torch_iterative_align_uniform(traj_tensor, dtype=torch.float32, device=torch
     old_log_lik = 0
     # loop
     while (delta_log_lik > thresh):
-        # compute correlation matrices using batched matmul
-        c_mats = torch.matmul(avg.T,traj_tensor)
-        # perfrom SVD of c_mats using batched SVD
-        #u, s, v = torch.linalg.svd(c_mats)
-        u, s, v = svd(c_mats)
-        # ensure true rotation by correcting sign of determinant
-        prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
-        u[:,:,-1] *= prod_dets.view(-1,1)
-        #rot_mat = torch.transpose(torch.matmul(u,v),1,2)
-        rot_mat = torch.matmul(v,torch.transpose(u,1,2))
+        # get rotation matrices
+        rot_mat = torch_align_rot_mat(traj_tensor, avg)
         # do rotation
         traj_tensor = torch.matmul(traj_tensor,rot_mat)
         # compute new average
@@ -114,18 +121,14 @@ def torch_iterative_align_uniform(traj_tensor, dtype=torch.float32, device=torch
             print(log_lik.cpu().numpy())
         old_log_lik = log_lik
     
-    return traj_tensor, avg, var
     # free up local variables 
-    del c_mats
-    del u
-    del s
-    del v
-    del prod_dets
     del rot_mat
     del disp
     torch.cuda.empty_cache()
+    # return values
+    return traj_tensor, avg, var
 
-
+# Perform iterative uniform Kabsch alignment of trajectory using frame weights
 def torch_iterative_align_uniform_weighted(traj_tensor, weight_tensor, ref_tensor=[], dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-3, verbose=False):
     # meta data
     n_frames = traj_tensor.shape[0]
@@ -145,16 +148,8 @@ def torch_iterative_align_uniform_weighted(traj_tensor, weight_tensor, ref_tenso
     delta_log_lik = thresh+10
     old_log_lik = 0
     while (delta_log_lik > thresh):
-        # compute correlation matrices using batched matmul
-        c_mats = torch.matmul(avg.T,traj_tensor)
-        # perfrom SVD of c_mats using batched SVD
-        #u, s, v = torch.linalg.svd(c_mats)
-        u, s, v = svd(c_mats)
-        # ensure true rotation by correcting sign of determinant
-        prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
-        u[:,:,-1] *= prod_dets.view(-1,1)
-        #rot_mat = torch.transpose(torch.matmul(u,v),1,2)
-        rot_mat = torch.matmul(v,torch.transpose(u,1,2))
+        # get rotation matrices
+        rot_mat = torch_align_rot_mat(traj_tensor, avg)
         # do rotation
         traj_tensor = torch.matmul(traj_tensor,rot_mat)
         # compute new average
@@ -173,63 +168,29 @@ def torch_iterative_align_uniform_weighted(traj_tensor, weight_tensor, ref_tenso
             print(log_lik)
         old_log_lik = log_lik
 
-    return traj_tensor, avg, var
     # free up local variables 
-    del c_mats
-    del u
-    del s
-    del v
-    del prod_dets
     del rot_mat
     del disp
     torch.cuda.empty_cache()
+    # return values
+    return traj_tensor, avg, var
 
 def torch_align_kronecker(traj_tensor, ref_tensor, precision_tensor, dtype=torch.float32, device=torch.device("cuda:0")):
     
     # make weighted ref
-    weighted_avg = torch.matmul(ref_tensor.T.to(torch.float64),precision_tensor).to(dtype)
-    
-    # compute correlation matrices using batched matmul
-    c_mats = torch.matmul(weighted_avg,traj_tensor)
-    # perfrom SVD of c_mats using batched SVD
-    u, s, v = svd(c_mats)
-    # ensure true rotation by correcting sign of determinant 
-    prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
-    u[:,:,-1] *= prod_dets.view(-1,1)
-    rot_mat = torch.matmul(v,torch.transpose(u,1,2))
+    weighted_ref = torch.matmul(precision_tensor,ref_tensor.to(torch.float64)).to(dtype)
+    # get rotation matrices
+    rot_mat = torch_align_rot_mat(traj_tensor, weighted_ref)
     # do rotation
     traj_tensor = torch.matmul(traj_tensor,rot_mat)
-    return traj_tensor
     # free up local variables 
-    del c_mats
-    del u
-    del s
-    del v
-    del prod_dets
+    del weighted_ref
     del rot_mat
     torch.cuda.empty_cache()    
+    # return aligned trajectory
+    return traj_tensor
 
-def _torch_pseudo_inv(sigma, dtype=torch.float64, device=torch.device("cuda:0"),EigenValueThresh=1e-10):
-    N = sigma.shape[0]
-    e, v = torch.linalg.eigh(sigma)
-    pinv = torch.zeros(sigma.shape,dtype=dtype,device=device)
-    for i in range(N):
-        if (e[i] > EigenValueThresh):
-            pinv += 1.0/e[i]*torch.outer(v[:,i],v[:,i])
-    return pinv
-    
-    
-def _torch_pseudo_inv_lndet(sigma, dtype=torch.float64, device=torch.device("cuda:0"),EigenValueThresh=1e-10):
-    N = sigma.shape[0]
-    e, v = torch.linalg.eigh(sigma)
-    pinv = torch.zeros(sigma.shape,dtype=dtype,device=device)
-    lpdet = torch.tensor(0.0,dtype=dtype,device=device)
-    for i in range(N):
-        if (e[i] > EigenValueThresh):
-            lpdet += torch.log(e[i])
-            pinv += 1.0/e[i]*torch.outer(v[:,i],v[:,i])
-    return pinv, lpdet
-
+# determine the ln(det) of a singular matrix ignoring eigenvalues below threshold
 def _torch_pseudo_lndet(sigma, EigenValueThresh=1e-10):
     e = torch.linalg.eigvalsh(sigma) 
     e = torch.where(e > EigenValueThresh, e, 1.0)
@@ -257,21 +218,13 @@ def torch_iterative_align_kronecker(traj_tensor, stride=1000, dtype=torch.float3
     covar_norm = torch.tensor(1/(3*(n_frames-1)),dtype=torch.float64,device=device)
     
     # initialize with average as the first frame (arbitrary choice)
-    weighted_avg = traj_tensor[0].T
+    weighted_avg = traj_tensor[0]
     
     delta_log_lik = thresh+10
     old_log_lik = 0
     while (delta_log_lik > thresh):
-        # compute correlation matrices using batched matmul
-        c_mats = torch.matmul(weighted_avg,traj_tensor)
-        # perfrom SVD of c_mats using batched SVD
-        #u, s, v = torch.linalg.svd(c_mats)
-        u, s, v = svd(c_mats)
-        # ensure true rotation by correcting sign of determinant 
-        prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
-        u[:,:,-1] *= prod_dets.view(-1,1)
-        #rot_mat = torch.transpose(torch.matmul(u,v),1,2)
-        rot_mat = torch.matmul(v,torch.transpose(u,1,2))
+        # get rotation matrices
+        rot_mat = torch_align_rot_mat(traj_tensor, weighted_avg)
         # do rotation
         traj_tensor = torch.matmul(traj_tensor,rot_mat)
         # compute new average
@@ -290,19 +243,15 @@ def torch_iterative_align_kronecker(traj_tensor, stride=1000, dtype=torch.float3
         if verbose == True:
             print(log_lik)
         old_log_lik = log_lik
-        weighted_avg = torch.matmul(avg.T.to(torch.float64),precision).to(dtype)
-    return traj_tensor, avg, precision, lpdet
+        weighted_avg = torch.matmul(precision,avg.to(torch.float64)).to(dtype)
     # free up local variables 
-    del c_mats
-    del u
-    del s
-    del v
-    del prod_dets
     del rot_mat
     del covar
     del disp
     del weighted_avg
     torch.cuda.empty_cache()   
+    # return values
+    return traj_tensor, avg, precision, lpdet
     
 
 def _torch_kronecker_weighted_log_lik(disp, weight_tensor, precision, lpdet):
@@ -326,25 +275,17 @@ def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_ten
     # set ref
     if ref_tensor == []:
         # initialize with average as the first frame (arbitrary choice)
-        weighted_avg = traj_tensor[0].T
+        weighted_avg = traj_tensor[0]
     else:
-        weighted_avg = torch.matmul(ref_tensor.T.to(torch.float64),ref_precision_tensor).to(dtype)
+        weighted_avg = torch.matmul(ref_precision_tensor, ref_tensor.to(torch.float64)).to(dtype)
     # pass normalization value to device
     covar_norm = torch.tensor(1/3,dtype=torch.float64,device=device)
     
     delta_log_lik = thresh+10
     old_log_lik = 0
     while (delta_log_lik > thresh):
-        # compute correlation matrices using batched matmul
-        c_mats = torch.matmul(weighted_avg,traj_tensor)
-        # perfrom SVD of c_mats using batched SVD
-        #u, s, v = torch.linalg.svd(c_mats)
-        u, s, v = svd(c_mats)
-        # ensure true rotation by correcting sign of determinant 
-        prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
-        u[:,:,-1] *= prod_dets.view(-1,1)
-        #rot_mat = torch.transpose(torch.matmul(u,v),1,2)
-        rot_mat = torch.matmul(v,torch.transpose(u,1,2))
+        # get rotation matrices
+        rot_mat = torch_align_rot_mat(traj_tensor, weighted_avg)
         # do rotation
         traj_tensor = torch.matmul(traj_tensor,rot_mat)
         # compute new average
@@ -363,17 +304,13 @@ def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_ten
         if verbose == True:
             print(log_lik)
         old_log_lik = log_lik
-        weighted_avg = torch.matmul(avg.T.to(torch.float64),precision).to(dtype)     
-    return traj_tensor, avg, precision, lpdet
+        weighted_avg = torch.matmul(precision, avg.to(torch.float64)).to(dtype)     
     # free up local variables 
-    del c_mats
-    del u
-    del s
-    del v
-    del prod_dets
     del rot_mat
     del covar
     del disp
     del weighted_avg
     torch.cuda.empty_cache()   
+    # return values
+    return traj_tensor, avg, precision, lpdet
     
