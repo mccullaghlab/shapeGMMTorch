@@ -257,15 +257,19 @@ class ShapeGMMTorch:
         if self._gmm_fit_flag == True:
             # determine sort key
             sort_key = np.argsort(self.weights)[::-1]
+            cluster_ids = np.arange(self.n_clusters).astype(int)
             sorted_cluster_ids = cluster_ids[sort_key]
             new_clusters = np.empty(n_frames,dtype=int)
             for frame in range(n_frames):
                 new_clusters[frame] = np.argwhere(sorted_cluster_ids == sgmm_obj.clusters[frame])
             # repopulate object
-            self.precisions = self.precisions[sort_key]
-            self.lpdets     = self.lpdets[sort_key]
             self.centers    = self.centers[sort_key]
             self.weights    = self.weights[sort_key]
             self.clusters   = new_clusters
+            if self.covar_type == "uniform":
+                self.vars = sel.vars[sort_key]
+            else:
+                self.precisions = self.precisions[sort_key]
+                self.lpdets     = self.lpdets[sort_key]
         else:
             print("shapeGMM must be fit before it can be sorted.")
