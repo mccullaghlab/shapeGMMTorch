@@ -20,6 +20,7 @@ The examples are also dependent on:
 1. MDAnalysis
 2. matplotlib
 3. pyemma
+4. shapeGMM
 
 ## Installation
 

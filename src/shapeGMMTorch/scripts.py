@@ -9,6 +9,7 @@ def cross_validate_cluster_scan(traj_data, n_train_frames, covar_type="kronecker
     Inputs:
         traj_data                  (required)  : float64 array with dimensions (n_frames, n_atoms,3) of molecular configurations
         n_train_frames             (required)  : int     scalar dictating number of frames to use as training (rest is used for CV)
+        covar_type              - string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'uniform'.
         cluster_array       (default: [2..8])  : int     array of cluster sizes - can be of any number but must be ints. Default is [2, 3, 4, 5, 6, 7, 8]
         n_training_sets         (default: 10)  : int     scalar dictating how many training sets to choose. Default is 10
         n_attempts               (default: 5)  : int     scalar dictating how many attempts to perform shape-GMM on same set.  Default is 5
