@@ -25,5 +25,6 @@ setuptools.setup(
     packages=setuptools.find_packages(where="src"),
     python_requires=">=3.6",
     license='MIT',
-    install_requires=['numpy','torch==1.11','torch_batch_svd'],
+    #install_requires=['numpy','torch==1.11','torch_batch_svd'],
+    install_requires=['numpy','torch>=1.11'],
 )
