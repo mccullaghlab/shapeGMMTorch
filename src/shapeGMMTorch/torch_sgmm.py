@@ -227,7 +227,7 @@ class ShapeGMMTorch:
             # should affirm that there are n_frames clusters
             self.clusters = clusters
         else: # default is random
-            self.clusters = torch_uniform_sgmm_lib.init_random(traj_tensor,self.n_clusters)
+            self.clusters = torch_uniform_sgmm_lib.init_random(traj_tensor,self.n_clusters,dtype=self.dtype, device=self.device)
             #log_lik = torch_uniform_sgmm_lib.uniform_sgmm_log_likelihood(traj_tensor,self.clusters,device=self.device).cpu().numpy()
         # clusters have been initialized
         self._init_clusters_flag = True

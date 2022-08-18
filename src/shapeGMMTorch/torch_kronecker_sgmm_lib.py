@@ -3,10 +3,9 @@ import warnings
 warnings.filterwarnings('ignore')
 import random
 from . import torch_align
-#import torch_align
 import torch
 
-GAMMA_THRESH = torch.tensor(1E-15,dtype=torch.float64,device=torch.device("cuda:0"))
+GAMMA_THRESH = 1e-15
 
 ##
 
@@ -57,6 +56,8 @@ def torch_sgmm_kronecker_em(traj_tensor, centers_tensor, precisions_tensor, lpde
     n_dim = traj_tensor.shape[2]
     n_clusters = ln_weights_tensor.shape[0]
 
+    gamma_thresh_tensor = torch.tensor(GAMMA_THRESH,dtype=torch.float64,device=device)
+
     # Expectation step:
     cluster_frame_ln_likelihoods_tensor = torch_sgmm_expectation_kronecker(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, dtype=dtype, device=device)
     
@@ -73,7 +74,7 @@ def torch_sgmm_kronecker_em(traj_tensor, centers_tensor, precisions_tensor, lpde
     ln_weights_tensor = torch.log(torch.mean(gamma_tensor,0))
     # update averages and variances of each cluster
     for k in range(n_clusters):
-        gamma_indeces = torch.argwhere(gamma_tensor[:,k] > GAMMA_THRESH).flatten()
+        gamma_indeces = torch.argwhere(gamma_tensor[:,k] > gamma_thresh_tensor).flatten()
         if gamma_indeces.shape[0] > n_atoms:
             # update mean and variance
             centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[gamma_indeces], gamma_tensor[gamma_indeces,k].to(dtype), ref_tensor=centers_tensor[k], ref_precision_tensor=precisions_tensor[k], dtype=dtype, thresh=thresh, device=device)[1:]

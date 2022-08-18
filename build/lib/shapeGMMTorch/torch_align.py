@@ -203,9 +203,13 @@ def _torch_kronecker_log_lik(disp, precision, lpdet):
     n_frames = disp.shape[0]
     n_atoms = disp.shape[1]
     # compute log Likelihood for all points
-    log_lik = torch.sum(torch.matmul(torch.transpose(disp[:,:,0].view(n_frames,n_atoms,1),1,2),torch.matmul(precision,disp[:,:,0].view(n_frames,n_atoms,1))),0)
-    log_lik += torch.sum(torch.matmul(torch.transpose(disp[:,:,1].view(n_frames,n_atoms,1),1,2),torch.matmul(precision,disp[:,:,1].view(n_frames,n_atoms,1))),0)
-    log_lik += torch.sum(torch.matmul(torch.transpose(disp[:,:,2].view(n_frames,n_atoms,1),1,2),torch.matmul(precision,disp[:,:,2].view(n_frames,n_atoms,1))),0)
+    log_lik = torch.matmul(disp[:,:,0].view(n_frames,1,n_atoms),torch.matmul(precision,disp[:,:,0].view(n_frames,n_atoms,1)))[:,0,0]
+    log_lik += torch.matmul(disp[:,:,1].view(n_frames,1,n_atoms),torch.matmul(precision,disp[:,:,1].view(n_frames,n_atoms,1)))[:,0,0]
+    log_lik += torch.matmul(disp[:,:,2].view(n_frames,1,n_atoms),torch.matmul(precision,disp[:,:,2].view(n_frames,n_atoms,1)))[:,0,0]
+    log_lik = torch.sum(log_lik)
+#    log_lik = torch.sum(torch.matmul(torch.transpose(disp[:,:,0].view(n_frames,n_atoms,1),1,2),torch.matmul(precision,disp[:,:,0].view(n_frames,n_atoms,1))),0)
+#    log_lik += torch.sum(torch.matmul(torch.transpose(disp[:,:,1].view(n_frames,n_atoms,1),1,2),torch.matmul(precision,disp[:,:,1].view(n_frames,n_atoms,1))),0)
+#    log_lik += torch.sum(torch.matmul(torch.transpose(disp[:,:,2].view(n_frames,n_atoms,1),1,2),torch.matmul(precision,disp[:,:,2].view(n_frames,n_atoms,1))),0)
     log_lik /= -2*n_frames
     log_lik -= 1.5 * lpdet
     return log_lik
@@ -239,7 +243,7 @@ def torch_iterative_align_kronecker(traj_tensor, stride=1000, dtype=torch.float3
         # log likelihood
         precision = torch.linalg.pinv(covar, atol=1e-10, hermitian= True)
         lpdet = _torch_pseudo_lndet(covar)
-        log_lik = _torch_kronecker_log_lik(disp, precision, lpdet)[0][0]
+        log_lik = _torch_kronecker_log_lik(disp, precision, lpdet)
         delta_log_lik = abs(log_lik - old_log_lik)
         if verbose == True:
             print(log_lik)
@@ -260,9 +264,13 @@ def _torch_kronecker_weighted_log_lik(disp, weight_tensor, precision, lpdet):
     n_frames = disp.shape[0]
     n_atoms = disp.shape[1]
     # compute log Likelihood for all points
-    log_lik = torch.sum(torch.matmul(torch.transpose(disp[:,:,0].view(n_frames,n_atoms,1),1,2),torch.matmul(precision,disp[:,:,0].view(n_frames,n_atoms,1)))*weight_tensor.view(-1,1,1),0)
-    log_lik += torch.sum(torch.matmul(torch.transpose(disp[:,:,1].view(n_frames,n_atoms,1),1,2),torch.matmul(precision,disp[:,:,1].view(n_frames,n_atoms,1)))*weight_tensor.view(-1,1,1),0)
-    log_lik += torch.sum(torch.matmul(torch.transpose(disp[:,:,2].view(n_frames,n_atoms,1),1,2),torch.matmul(precision,disp[:,:,2].view(n_frames,n_atoms,1)))*weight_tensor.view(-1,1,1),0)
+    log_lik = torch.matmul(disp[:,:,0].view(n_frames,1,n_atoms),torch.matmul(precision,disp[:,:,0].view(n_frames,n_atoms,1)))[:,0,0]
+    log_lik += torch.matmul(disp[:,:,1].view(n_frames,1,n_atoms),torch.matmul(precision,disp[:,:,1].view(n_frames,n_atoms,1)))[:,0,0]
+    log_lik += torch.matmul(disp[:,:,2].view(n_frames,1,n_atoms),torch.matmul(precision,disp[:,:,2].view(n_frames,n_atoms,1)))[:,0,0]
+    log_lik = torch.sum(log_lik*weight_tensor)
+    #log_lik = torch.sum(torch.matmul(torch.transpose(disp[:,:,0].view(n_frames,n_atoms,1),1,2),torch.matmul(precision,disp[:,:,0].view(n_frames,n_atoms,1)))*weight_tensor.view(-1,1,1),0)
+    #log_lik += torch.sum(torch.matmul(torch.transpose(disp[:,:,1].view(n_frames,n_atoms,1),1,2),torch.matmul(precision,disp[:,:,1].view(n_frames,n_atoms,1)))*weight_tensor.view(-1,1,1),0)
+    #log_lik += torch.sum(torch.matmul(torch.transpose(disp[:,:,2].view(n_frames,n_atoms,1),1,2),torch.matmul(precision,disp[:,:,2].view(n_frames,n_atoms,1)))*weight_tensor.view(-1,1,1),0)
     log_lik *= -0.5
     log_lik -= 1.5 * lpdet
     return log_lik
@@ -300,7 +308,7 @@ def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_ten
         # log likelihood
         precision = torch.linalg.pinv(covar, atol=1e-10, hermitian= True)
         lpdet = _torch_pseudo_lndet(covar)
-        log_lik = _torch_kronecker_weighted_log_lik(disp, weight_tensor, precision, lpdet)[0][0]
+        log_lik = _torch_kronecker_weighted_log_lik(disp, weight_tensor, precision, lpdet)
         delta_log_lik = abs(log_lik - old_log_lik)
         if verbose == True:
             print(log_lik)

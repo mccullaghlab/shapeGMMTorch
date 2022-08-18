@@ -6,10 +6,7 @@ from . import torch_align
 #import torch_align
 import torch
 
-NUMERIC_THRESH = 1E-150
-LOG_NUMERIC_THRESH = np.log(NUMERIC_THRESH)
-GAMMA_THRESH = torch.tensor(1E-15,dtype=torch.float64,device=torch.device("cuda:0"))
-eigenValueThresh = 1E-10
+GAMMA_THRESH = 1e-15
 
 ##
 
@@ -79,6 +76,7 @@ def torch_sgmm_uniform_em(traj_tensor, centers_tensor, vars_tensor, ln_weights_t
     n_atoms = traj_tensor.shape[1]
     n_dim = traj_tensor.shape[2]
     n_clusters = ln_weights_tensor.shape[0]
+    gamma_thresh_tensor = torch.tensor(GAMMA_THRESH,dtype=torch.float64,device=device)
 
     # Expectation step:
     cluster_frame_ln_likelihoods_tensor = torch_sgmm_expectation_uniform(traj_tensor, centers_tensor, vars_tensor, device=device)
@@ -96,7 +94,7 @@ def torch_sgmm_uniform_em(traj_tensor, centers_tensor, vars_tensor, ln_weights_t
     ln_weights_tensor = torch.log(torch.mean(gamma_tensor,0))
     # update averages and variances of each cluster
     for k in range(n_clusters):
-        gamma_indeces = torch.argwhere(gamma_tensor[:,k] > GAMMA_THRESH).flatten()
+        gamma_indeces = torch.argwhere(gamma_tensor[:,k] > gamma_thresh_tensor).flatten()
         # update mean and variance
         centers_tensor[k], vars_tensor[k] = torch_align.torch_iterative_align_uniform_weighted(traj_tensor[gamma_indeces], gamma_tensor[gamma_indeces,k].to(dtype), ref_tensor=centers_tensor[k], dtype=dtype, thresh=thresh, device=device)[1:]
     return centers_tensor, vars_tensor, ln_weights_tensor, log_likelihood    
