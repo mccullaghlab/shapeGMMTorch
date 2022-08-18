@@ -8,9 +8,9 @@ This is a package to perform Gaussian Mixture Model (GMM) clustering on particle
 
 This package is dependent on the following packages:
 
-1. Python 3.6 or greater
+1. Python>=3.6 
 2. numpy
-3. torch (version 1.11 if option 4 is used)
+3. torch>=1.11 (==1.11 if option 4 is used)
 4. Optional: torch_batch_svd available from https://github.com/KinglittleQ/torch-batch-svd
 
 The last package is for the SVD part of the alignment and is much faster than the native batch torch library.  It is, however, not compatible with the current version of torch (1.12) thus the requirement of torch 1.11.
@@ -24,7 +24,11 @@ The examples are also dependent on:
 
 ## Installation
 
-After the dependencies have been installed, the package can be installed by downloading and then running
+After the dependencies have been installed, the package can be installed from pip
+
+`pip install shapeGMMTorch`
+
+or by downloading from github and then running
 
 `python setup.py install`
 
