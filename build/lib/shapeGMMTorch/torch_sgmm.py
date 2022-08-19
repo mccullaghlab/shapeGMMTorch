@@ -176,7 +176,7 @@ class ShapeGMMTorch:
             log_norm = torch.logsumexp(cluster_frame_ln_likelihoods_tensor,1)
             log_likelihood = torch.mean(log_norm).cpu().numpy()
             # assign clusters based on largest likelihood (probability density)
-            clusters = torch.argmax(cluster_frame_ln_likelihoods_tensor, dim = 0).cpu().numpy()
+            clusters = torch.argmax(cluster_frame_ln_likelihoods_tensor, dim = 1).cpu().numpy()
             # align each cluster to its average
             for k in range(self.n_clusters):
                 indeces = np.argwhere(clusters == k).flatten()
@@ -184,6 +184,8 @@ class ShapeGMMTorch:
                     traj_tensor[indeces] = torch_align.torch_align_uniform(traj_tensor[indeces], centers_tensor[k])
                 else:
                     traj_tensor[indeces] = torch_align.torch_align_kronecker(traj_tensor[indeces], centers_tensor[k], precisions_tensor[k], dtype=self.dtype, device=self.device)
+            # return traj_data to cpu
+            traj_data = traj_tensor.cpu().numpy()
             # delete data from gpu
             del traj_tensor
             del ln_weights_tensor

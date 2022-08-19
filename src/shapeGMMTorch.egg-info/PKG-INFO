@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: shapeGMMTorch
-Version: 0.0.1
+Version: 0.0.2
 Summary: Gaussian Mixture Model clustering in size-and-shape space using PyTorch
 Home-page: https://github.com/mccullaghlab/shapeGMMTorch
 Author: Martin McCullagh
@@ -17,9 +17,9 @@ Description: # shapeGMMTorch
         
         This package is dependent on the following packages:
         
-        1. Python 3.6 or greater
+        1. Python>=3.6 
         2. numpy
-        3. torch (version 1.11 if option 4 is used)
+        3. torch>=1.11 (==1.11 if option 4 is used)
         4. Optional: torch_batch_svd available from https://github.com/KinglittleQ/torch-batch-svd
         
         The last package is for the SVD part of the alignment and is much faster than the native batch torch library.  It is, however, not compatible with the current version of torch (1.12) thus the requirement of torch 1.11.
@@ -33,7 +33,11 @@ Description: # shapeGMMTorch
         
         ## Installation
         
-        After the dependencies have been installed, the package can be installed by downloading and then running
+        After the dependencies have been installed, the package can be installed from pip
+        
+        `pip install shapeGMMTorch`
+        
+        or by downloading from github and then running
         
         `python setup.py install`
         
