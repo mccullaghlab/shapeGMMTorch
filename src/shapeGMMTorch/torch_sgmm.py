@@ -114,13 +114,17 @@ class ShapeGMMTorch:
         self.log_likelihood = log_likelihood.cpu().numpy()
         # uniform/weighted specific variables
         if self.covar_type == 'uniform': 
-            traj_data, self.centers = self._align_clusters_uniform(traj_tensor,centers_tensor)
             self.cluster_frame_ln_likelihoods =  torch_uniform_sgmm_lib.torch_sgmm_expectation_uniform(traj_tensor, centers_tensor, vars_tensor, device=self.device).cpu().numpy()
+            # assign clusters based on largest likelihood 
+            self.clusters = torch.argmax(cluster_frame_ln_likelihoods_tensor, dim = 1).cpu().numpy()
+            traj_data, self.centers = self._align_clusters_uniform(traj_tensor,centers_tensor)
             self.vars = vars_tensor.cpu().numpy()
             del vars_tensor
         else: # assume Kronecker product covariance
-            traj_data, self.centers = self._align_clusters_kronecker(traj_tensor,centers_tensor, precisions_tensor)
             self.cluster_frame_ln_likelihoods =  torch_kronecker_sgmm_lib.torch_sgmm_expectation_kronecker(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, dtype=self.dtype, device=self.device).cpu().numpy()
+            # assign clusters based on largest likelihood 
+            self.clusters = torch.argmax(cluster_frame_ln_likelihoods_tensor, dim = 1).cpu().numpy()
+            traj_data, self.centers = self._align_clusters_kronecker(traj_tensor,centers_tensor, precisions_tensor)
             self.precisions = precisions_tensor.cpu().numpy()
             self.lpdets = lpdets_tensor.cpu().numpy()
             del precisions_tensor
@@ -130,8 +134,6 @@ class ShapeGMMTorch:
         del centers_tensor
         torch.cuda.empty_cache()
         
-        # assign clusters based on largest likelihood 
-        self.clusters = np.argmax(self.cluster_frame_ln_likelihoods, axis = 1)
         # sort object
         if self.sort == True:
             self._sort_object()
