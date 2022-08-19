@@ -46,10 +46,9 @@ def torch_remove_center_of_geometry(traj_tensor, dtype=torch.float32, device=tor
     # meta data
     n_frames = traj_tensor.shape[0]
     # compute geometric center of each frame
-    cog = torch.mean(traj_tensor.to(torch.float64),1,False)
+    cog = torch.mean(traj_tensor.to(torch.float64),1,True)
     # substract from each frame
-    for i in range(n_frames):
-        traj_tensor[i] -= cog[i]
+    traj_tensor -= cog
     # free up local variables 
     del cog
     torch.cuda.empty_cache()
@@ -207,9 +206,6 @@ def _torch_kronecker_log_lik(disp, precision, lpdet):
     log_lik += torch.matmul(disp[:,:,1].view(n_frames,1,n_atoms),torch.matmul(precision,disp[:,:,1].view(n_frames,n_atoms,1)))[:,0,0]
     log_lik += torch.matmul(disp[:,:,2].view(n_frames,1,n_atoms),torch.matmul(precision,disp[:,:,2].view(n_frames,n_atoms,1)))[:,0,0]
     log_lik = torch.sum(log_lik)
-#    log_lik = torch.sum(torch.matmul(torch.transpose(disp[:,:,0].view(n_frames,n_atoms,1),1,2),torch.matmul(precision,disp[:,:,0].view(n_frames,n_atoms,1))),0)
-#    log_lik += torch.sum(torch.matmul(torch.transpose(disp[:,:,1].view(n_frames,n_atoms,1),1,2),torch.matmul(precision,disp[:,:,1].view(n_frames,n_atoms,1))),0)
-#    log_lik += torch.sum(torch.matmul(torch.transpose(disp[:,:,2].view(n_frames,n_atoms,1),1,2),torch.matmul(precision,disp[:,:,2].view(n_frames,n_atoms,1))),0)
     log_lik /= -2*n_frames
     log_lik -= 1.5 * lpdet
     return log_lik
