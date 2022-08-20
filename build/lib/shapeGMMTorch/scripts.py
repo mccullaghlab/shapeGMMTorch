@@ -56,6 +56,7 @@ def cross_validate_cluster_scan(traj_data, n_train_frames, covar_type="kronecker
                 w_objs.append(wsgmm)
                 elapsed_time = time.process_time()-start_time
                 print("%15d %15d %15d %19.3f %15.3f" % (training_set+1, cluster_size, attempt+1, np.round(wsgmm.log_likelihood,3), np.round(elapsed_time,3)))
+                sys.stdout.flush()
             # determine maximum
             w_arg = np.argmax(w_log_lik)
             # save training log likes
