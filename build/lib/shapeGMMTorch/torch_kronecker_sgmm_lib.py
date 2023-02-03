@@ -8,7 +8,6 @@ import torch
 GAMMA_THRESH = 1e-15
 
 ##
-
 def kronecker_sgmm_log_likelihood(traj_tensor, clusters, thresh=1e-3, dtype=torch.float32, device=torch.device("cuda:0")):
     # meta data from inputs
     n_frames = traj_tensor.shape[0]
@@ -23,19 +22,22 @@ def kronecker_sgmm_log_likelihood(traj_tensor, clusters, thresh=1e-3, dtype=torc
         indeces = np.argwhere(clusters == k).flatten()
         # initialize weights as populations of clusters
         ln_weight = torch.tensor(np.log(indeces.size/n_frames),dtype=torch.float64,device=device)
+        print(torch.exp(ln_weight).cpu().numpy())
         # determine center and precision of cluster using iterative alignment
         center_tensor, precision_tensor, lpdet_tensor = torch_align.torch_iterative_align_kronecker(traj_tensor[indeces], thresh=thresh, dtype=dtype, device=device)[1:]
         # align the entire trajectory to each cluster mean
-        traj_tensor = torch_align.torch_align_kronecker(traj_tensor,center_tensor, precision_tensor)
+        traj_tensor = torch_align.torch_align_kronecker(traj_tensor,center_tensor, precision_tensor, dtype=dtype, device=device)
         # compute log likelihood per frame
         disp = (traj_tensor - center_tensor).to(torch.float64)
         # Determine square deviation of each frame aligned to each mean
-        cluster_frame_ln_likelihoods[:,k] = torch.matmul(disp[:,:,0].view(n_frames,1,n_atoms),torch.matmul(precisions_tensor,disp[:,:,0].view(n_frames,n_atoms,1)))[:,0,0]
-        cluster_frame_ln_likelihoods[:,k] += torch.matmul(disp[:,:,1].view(n_frames,1,n_atoms),torch.matmul(precisions_tensor,disp[:,:,1].view(n_frames,n_atoms,1)))[:,0,0]
-        cluster_frame_ln_likelihoods[:,k] += torch.matmul(disp[:,:,2].view(n_frames,1,n_atoms),torch.matmul(precisions_tensor,disp[:,:,2].view(n_frames,n_atoms,1)))[:,0,0]
+        cluster_frame_ln_likelihoods[:,k] = torch.matmul(disp[:,:,0].view(n_frames,1,n_atoms),torch.matmul(precision_tensor,disp[:,:,0].view(n_frames,n_atoms,1)))[:,0,0]
+        cluster_frame_ln_likelihoods[:,k] += torch.matmul(disp[:,:,1].view(n_frames,1,n_atoms),torch.matmul(precision_tensor,disp[:,:,1].view(n_frames,n_atoms,1)))[:,0,0]
+        cluster_frame_ln_likelihoods[:,k] += torch.matmul(disp[:,:,2].view(n_frames,1,n_atoms),torch.matmul(precision_tensor,disp[:,:,2].view(n_frames,n_atoms,1)))[:,0,0]
         # divide be variance and normalize
         cluster_frame_ln_likelihoods[:,k] *= -0.5
         cluster_frame_ln_likelihoods[:,k] -= 1.5*lpdet_tensor
+        # add ln weight
+        cluster_frame_ln_likelihoods[:,k] += ln_weight
     # compute log likelihood
     log_likelihood = torch.logsumexp(cluster_frame_ln_likelihoods,1)
     log_likelihood = torch.mean(log_likelihood)
@@ -45,7 +47,8 @@ def kronecker_sgmm_log_likelihood(traj_tensor, clusters, thresh=1e-3, dtype=torc
     del precision_tensor
     del lpdet_tensor
     torch.cuda.empty_cache()
-    return log_likelihood
+    return log_likelihood.cpu().numpy()
+
 
 ## Expectation Maximization for GMM with Kronecker covariance model
 def torch_sgmm_kronecker_em(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-1):

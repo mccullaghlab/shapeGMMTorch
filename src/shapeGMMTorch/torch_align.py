@@ -210,13 +210,13 @@ def _torch_kronecker_log_lik(disp, precision, lpdet):
     log_lik -= 1.5 * lpdet
     return log_lik
 
-def torch_iterative_align_kronecker(traj_tensor, stride=1000, dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-3, verbose=False):
+def torch_iterative_align_kronecker(traj_tensor, stride=1024, dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-3, verbose=False):
     # meta data
     n_frames = traj_tensor.shape[0]
     n_atoms = traj_tensor.shape[1]
     
-    # pass trajectory to device
-    covar_norm = torch.tensor(1/(3*(n_frames-1)),dtype=torch.float64,device=device)
+    # pass constant to device
+    covar_norm = torch.tensor(1/(3*n_frames-1),dtype=torch.float64,device=device)
     
     # initialize with average as the first frame (arbitrary choice)
     weighted_avg = traj_tensor[0]
@@ -234,7 +234,8 @@ def torch_iterative_align_kronecker(traj_tensor, stride=1000, dtype=torch.float3
         # compute covar using strided data
         covar = torch.zeros((n_atoms,n_atoms),dtype=torch.float64,device=device)
         for frame in range(0,n_frames,stride):
-            covar += torch.sum(torch.matmul(disp[frame:frame+stride],torch.transpose(disp[frame:frame+stride],1,2)),0)
+            upper_limit = min(frame+stride,n_frames)
+            covar += torch.sum(torch.matmul(disp[frame:upper_limit],torch.transpose(disp[frame:upper_limit],1,2)),0)
         covar *= covar_norm
         # log likelihood
         precision = torch.linalg.pinv(covar, atol=1e-10, hermitian= True)
@@ -271,7 +272,7 @@ def _torch_kronecker_weighted_log_lik(disp, weight_tensor, precision, lpdet):
     log_lik -= 1.5 * lpdet
     return log_lik
 
-def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_tensor=[], ref_precision_tensor=[], stride=1000, dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-3, verbose=False):
+def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_tensor=[], ref_precision_tensor=[], stride=1024, dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-3, verbose=False):
     # meta data
     n_frames = traj_tensor.shape[0]
     n_atoms = traj_tensor.shape[1]
@@ -299,7 +300,8 @@ def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_ten
         # compute covar using strided data
         covar = torch.zeros((n_atoms,n_atoms),dtype=torch.float64,device=device)
         for frame in range(0,n_frames,stride):
-            covar += torch.sum(torch.matmul(disp[frame:frame+stride],torch.transpose(disp[frame:frame+stride],1,2))*weight_tensor[frame:frame+stride].view(-1,1,1),0)
+            upper_limit = min(frame+stride,n_frames)
+            covar += torch.sum(torch.matmul(disp[frame:upper_limit],torch.transpose(disp[frame:upper_limit],1,2))*weight_tensor[frame:upper_limit].view(-1,1,1),0)
         covar *= covar_norm
         # log likelihood
         precision = torch.linalg.pinv(covar, atol=1e-10, hermitian= True)
