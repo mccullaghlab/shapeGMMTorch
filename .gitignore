@@ -9,6 +9,9 @@
 *.swp
 # ignore jupyter checkpoints
 *.ipynb_checkpoints
+# ignore build directory
+build
+dist
 # pycache
 __pycache__
 
