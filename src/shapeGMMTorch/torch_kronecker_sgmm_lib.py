@@ -2,7 +2,8 @@ import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
 import random
-from . import torch_align
+import torch_align
+#from . import torch_align
 import torch
 
 GAMMA_THRESH = 1e-15
@@ -51,7 +52,7 @@ def kronecker_sgmm_log_likelihood(traj_tensor, clusters, thresh=1e-3, dtype=torc
 
 
 ## Expectation Maximization for GMM with Kronecker covariance model
-def torch_sgmm_kronecker_em(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-1):
+def torch_sgmm_kronecker_em(traj_tensor, frame_weights_tensor, centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-1):
     
     # get metadata from trajectory data
     n_frames = traj_tensor.shape[0]
@@ -68,13 +69,15 @@ def torch_sgmm_kronecker_em(traj_tensor, centers_tensor, precisions_tensor, lpde
     for k in range(n_clusters):
         cluster_frame_ln_likelihoods_tensor[:,k] += ln_weights_tensor[k]
     log_norm = torch.logsumexp(cluster_frame_ln_likelihoods_tensor,1)
-    log_likelihood = torch.mean(log_norm)
+    log_likelihood = torch.sum(frame_weights_tensor*log_norm,0)
     # determine gamma values
     # use the current values for the parameters to evaluate the posterior
     # probabilities of the data to have been generanted by each gaussian
     gamma_tensor = torch.exp(cluster_frame_ln_likelihoods_tensor - log_norm.view(-1,1))
+    # multiply gamma by frame weights
+    gamma_tensor *= frame_weights_tensor.view(-1,1)
     # update the weights
-    ln_weights_tensor = torch.log(torch.mean(gamma_tensor,0))
+    ln_weights_tensor = torch.log(torch.sum(gamma_tensor,0))
     # update averages and variances of each cluster
     for k in range(n_clusters):
         gamma_indeces = torch.argwhere(gamma_tensor[:,k] > gamma_thresh_tensor).flatten()

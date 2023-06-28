@@ -4,9 +4,12 @@ import warnings
 warnings.filterwarnings('ignore')
 import random
 # the following are local libraries
-from . import torch_align
-from . import torch_uniform_sgmm_lib
-from . import torch_kronecker_sgmm_lib
+import torch_align
+import torch_uniform_sgmm_lib
+import torch_kronecker_sgmm_lib
+#from . import torch_align
+#from . import torch_uniform_sgmm_lib                            
+#from . import torch_kronecker_sgmm_lib  
 
 # class
 class ShapeGMMTorch:
@@ -48,11 +51,12 @@ class ShapeGMMTorch:
         self._gmm_fit_flag = False                              # boolean tracking if GMM has been fit.
 
     # fit the model
-    def fit(self, traj_data, clusters = []):
+    def fit(self, traj_data, clusters = [], frame_weights = []):
         """
         Fit size-and-shape GMM using traj_data as the training data.
-        traj_data (required)   - (n_frames, n_atoms, 3) float32 or float64 numpy array of particle positions. 
-        clusters               - (n_frames) integer numpy array of initial cluster assignments.  
+        traj_data     (required) - (n_frames, n_atoms, 3) float32 or float64 numpy array of particle positions. 
+        clusters      (optional) - (n_frames) integer numpy array of initial cluster assignments.  
+        frame_weights (optional) - (n_frames) float numpy array of frame weights
 
         Returns an aligned trajectory, if requested.  Each cluster aligned to respective average.
         """
@@ -62,6 +66,18 @@ class ShapeGMMTorch:
         # Initialize clusters if they have not been already
         if (self._init_clusters_flag == False):
             self._init_clusters(traj_tensor, clusters)
+        # frame weights
+        if frame_weights == []:
+            if (self.verbose==True):
+                print("Setting uniform frame weights")
+            self.frame_weights = np.ones(self.n_frames,dtype=np.float64)/self.n_frames
+        else:
+            if (self.verbose==True):
+                print("Using user provided frame weights")
+            # use provided frame weights but make sure they are normalized
+            self.frame_weights = frame_weights/np.sum(frame_weights)   
+        # pass the frame weights to the device (enforce double precision for accuracy)
+        frame_weights_tensor = torch.tensor(self.frame_weights,dtype=torch.float64,device=self.device)
             
         # declare some important arrays for the model
         centers_tensor = torch.empty((self.n_clusters,self.n_atoms,self.n_dim),dtype=self.dtype,device=self.device)
@@ -81,9 +97,9 @@ class ShapeGMMTorch:
             # initialize weights as populations of clusters
             self.weights[k] = indeces.size/self.n_frames
             if self.covar_type == 'uniform':
-                centers_tensor[k], vars_tensor[k] = torch_align.torch_iterative_align_uniform(traj_tensor[indeces],thresh=self.kabsch_thresh,device=self.device,dtype=self.dtype)[1:]
+                centers_tensor[k], vars_tensor[k] = torch_align.torch_iterative_align_uniform_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,device=self.device,dtype=self.dtype)[1:]
             else:
-                centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker(traj_tensor[indeces],thresh=self.kabsch_thresh,device=self.device,dtype=self.dtype)[1:]        
+                centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,device=self.device,dtype=self.dtype)[1:]        
         if (self.verbose == True):
             print("Weights from initial clusters in fit:", self.weights)
     
@@ -96,9 +112,9 @@ class ShapeGMMTorch:
         while step < self.max_steps and delta_log_lik > self.log_thresh:
             # Expectation maximization
             if self.covar_type == 'uniform':
-                centers_tensor, vars_tensor, ln_weights_tensor, log_likelihood = torch_uniform_sgmm_lib.torch_sgmm_uniform_em(traj_tensor, centers_tensor, vars_tensor, ln_weights_tensor, thresh=self.kabsch_thresh, dtype=self.dtype, device=self.device)
+                centers_tensor, vars_tensor, ln_weights_tensor, log_likelihood = torch_uniform_sgmm_lib.torch_sgmm_uniform_em(traj_tensor, frame_weights_tensor, centers_tensor, vars_tensor, ln_weights_tensor, thresh=self.kabsch_thresh, dtype=self.dtype, device=self.device)
             else:
-                centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, log_likelihood = torch_kronecker_sgmm_lib.torch_sgmm_kronecker_em(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, thresh=self.kabsch_thresh, dtype=self.dtype, device=self.device)
+                centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, log_likelihood = torch_kronecker_sgmm_lib.torch_sgmm_kronecker_em(traj_tensor, frame_weights_tensor, centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, thresh=self.kabsch_thresh, dtype=self.dtype, device=self.device)
             if (self.verbose == True):
                 print(step+1, np.round(torch.exp(ln_weights_tensor).cpu().numpy(),3), np.round(log_likelihood.cpu().numpy(),3))
             # compute convergence criteria
@@ -142,10 +158,11 @@ class ShapeGMMTorch:
         return traj_data
 
     # predict clustering of provided data based on prefit parameters from fit_weighted
-    def predict(self,traj_data):
+    def predict(self,traj_data, frame_weights = []):
         """
         Predict size-and-shape GMM using traj_data as prediction set and already fit object parameters.
-        traj_data (required)   - (n_frames, n_atoms, 3) float32 or float64 numpy array of particle positions. 
+        traj_data (required)     - (n_frames, n_atoms, 3) float32 or float64 numpy array of particle positions. 
+        frame_weights (optional) - (n_frames) float numpy array of frame weights
 
         Returns:
         cluster ids             - (n_frames) int array
@@ -154,11 +171,13 @@ class ShapeGMMTorch:
         """
 
         if self._gmm_fit_flag == True:
+            # metadata
+            n_predict_frames = traj_data.shape[0]
             # send data to device
             traj_tensor = torch.tensor(traj_data,dtype=self.dtype,device=self.device)
             centers_tensor = torch.tensor(self.centers,dtype=self.dtype,device=self.device)
             ln_weights_tensor = torch.tensor(np.log(self.weights),dtype=torch.float64,device=self.device)
-            # uniform/weighted specific variables
+            # uniform/kronecker covariance specific variables
             if self.covar_type == 'uniform': 
                 vars_tensor = torch.tensor(self.vars,dtype=torch.float64,device=self.device)
             else: # assume weighted
@@ -166,6 +185,19 @@ class ShapeGMMTorch:
                 precisions_tensor = torch.tensor(self.precisions,dtype=torch.float64,device=self.device)
                 # declare array for log determinants for each clusters
                 lpdets_tensor = torch.tensor(self.lpdets, dtype=torch.float64,device=self.device)
+            # frame weights
+            if frame_weights == []:
+                if (self.verbose==True):
+                    print("Assuming uniform frame weights")
+                frame_weights = np.ones(n_predict_frames,dtype=np.float64)/self.n_frames
+            else:
+                if (self.verbose==True):
+                    print("Using user provided frame weights")
+                # use provided frame weights but make sure they are normalized
+                frame_weights = frame_weights.astype(np.float64)
+                frame_weights /= np.sum(frame_weights)   
+            # pass the frame weights to the device (enforce double precision for accuracy)
+            frame_weights_tensor = torch.tensor(frame_weights,dtype=torch.float64,device=self.device)
             
             # make sure trajectory is centered
             torch_align.torch_remove_center_of_geometry(traj_tensor,dtype=self.dtype,device=self.device)
@@ -177,7 +209,7 @@ class ShapeGMMTorch:
             for k in range(self.n_clusters):
                 cluster_frame_ln_likelihoods_tensor[:,k] += ln_weights_tensor[k]
             log_norm = torch.logsumexp(cluster_frame_ln_likelihoods_tensor,1)
-            log_likelihood = torch.mean(log_norm).cpu().numpy()
+            log_likelihood = torch.sum(frame_weights_tensor*log_norm,0).cpu().numpy()
             # assign clusters based on largest likelihood (probability density)
             clusters = torch.argmax(cluster_frame_ln_likelihoods_tensor, dim = 1).cpu().numpy()
             # align each cluster to its average
@@ -219,7 +251,7 @@ class ShapeGMMTorch:
             print("Number of dimensions (must be 3):", self.n_dim)
             print("Initializing clustering using method:", self.init_cluster_method)
         # declare clusters
-        self.clusters = np.zeros(self.n_frames,dtype=np.int)
+        self.clusters = np.zeros(self.n_frames,dtype=np.int32)
 
         # Remove the center-of-geometry from entire trajectory
         torch_align.torch_remove_center_of_geometry(traj_tensor)

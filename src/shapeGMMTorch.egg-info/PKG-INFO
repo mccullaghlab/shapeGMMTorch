@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: shapeGMMTorch
-Version: 0.0.9
+Version: 1.0.0
 Summary: Gaussian Mixture Model clustering in size-and-shape space using PyTorch
 Home-page: https://github.com/mccullaghlab/shapeGMMTorch
 Author: Martin McCullagh

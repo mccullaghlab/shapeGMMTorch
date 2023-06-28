@@ -2,14 +2,16 @@ import numpy as np
 import time
 import sys
 import torch
-from . import torch_sgmm
+import torch_sgmm
+#from . import torch_sgmm
 
-def cross_validate_cluster_scan(traj_data, n_train_frames, covar_type="kronecker", cluster_array = np.arange(2,9,1).astype(int), n_training_sets=10, n_attempts = 5, dtype=torch.float32, device=torch.device("cuda:0")):
+def cross_validate_cluster_scan(traj_data, n_train_frames, frame_weights = [], covar_type="kronecker", cluster_array = np.arange(2,9,1).astype(int), n_training_sets=10, n_attempts = 5, dtype=torch.float32, device=torch.device("cuda:0")):
     """
     perform cross validation weighted shape-GMM for range of cluster sizes
     Inputs:
         traj_data                    (required)  : float64 array with dimensions (n_frames, n_atoms,3) of molecular configurations
         n_train_frames               (required)  : int     scalar dictating number of frames to use as training (rest is used for CV)
+        frame_weights               (default []) : float   array defining frame weights.  Default is empty/uniform
         covar_type         (default "kronecker") : string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'uniform'.
         cluster_array         (default: [2..8])  : int     array of cluster sizes - can be of any number but must be ints. Default is [2, 3, 4, 5, 6, 7, 8]
         n_training_sets           (default: 10)  : int     scalar dictating how many training sets to choose. Default is 10
@@ -37,12 +39,19 @@ def cross_validate_cluster_scan(traj_data, n_train_frames, covar_type="kronecker
     print("%15s %15s %15s %19s %15s" % ("Training Set", "N Clusters", "Attempt", "Log Like per Frame","CPU Time (s)"))
     print("%84s" % ("------------------------------------------------------------------------------------"))
     # loop over training sets
+    index_array = np.arange(n_frames).astype(int)
     for training_set in range(n_training_sets):
         # shuffle trajectory data
-        np.random.shuffle(traj_data)
+        np.random.shuffle(index_array)
         # create training and predict data
-        train_data = traj_data[:n_train_frames]
-        predict_data = traj_data[n_train_frames:]
+        train_data = traj_data[index_array[:n_train_frames]]
+        predict_data = traj_data[index_array[n_train_frames:]]
+        if frame_weights == []:
+            train_frame_weights = []
+            predict_frame_weights = []
+        else:
+            train_frame_weights = frame_weights[index_array[:n_train_frames]]
+            predict_frame_weights = frame_weights[index_array[n_train_frames:]]
         # loop over all number of clusters
         for cluster_index, cluster_size in enumerate(cluster_array):
             w_log_lik = []
@@ -51,7 +60,7 @@ def cross_validate_cluster_scan(traj_data, n_train_frames, covar_type="kronecker
             for attempt in range(n_attempts):
                 start_time = time.process_time()
                 wsgmm = torch_sgmm.ShapeGMMTorch(cluster_size, covar_type=covar_type, dtype=dtype, device=device)
-                wsgmm.fit(train_data)
+                wsgmm.fit(train_data, frame_weights=train_frame_weights)
                 w_log_lik.append(wsgmm.log_likelihood)
                 w_objs.append(wsgmm)
                 elapsed_time = time.process_time()-start_time
@@ -62,7 +71,7 @@ def cross_validate_cluster_scan(traj_data, n_train_frames, covar_type="kronecker
             # save training log likes
             weighted_train_log_lik[cluster_index,training_set] = w_log_lik[w_arg]
             # save prediction log likes
-            weighted_predict_log_lik[cluster_index,training_set] = w_objs[w_arg].predict(predict_data)[2]
+            weighted_predict_log_lik[cluster_index,training_set] = w_objs[w_arg].predict(predict_data,predict_frame_weights)[2]
 
     #return
     return weighted_train_log_lik, weighted_predict_log_lik
