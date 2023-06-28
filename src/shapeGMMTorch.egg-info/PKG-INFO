@@ -7,7 +7,6 @@ Author: Martin McCullagh
 Author-email: martin.mccullagh@okstate.edu
 License: MIT
 Project-URL: Bug Tracker, https://github.com/mccullaghlab/shapeGMMTorch/issues
-Platform: UNKNOWN
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
@@ -110,7 +109,5 @@ Kronecker covariance specific attributes
 
 	- precisions	   	- (n_clusters, n_atoms, n_atoms) float array of cluster precisions (inverse covariances)
 	- lpdets	    	- (n_clusters) float array of ln(det(covar))
-
-
 
 
