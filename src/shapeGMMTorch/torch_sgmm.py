@@ -189,7 +189,7 @@ class ShapeGMMTorch:
             if frame_weights == []:
                 if (self.verbose==True):
                     print("Assuming uniform frame weights")
-                frame_weights = np.ones(n_predict_frames,dtype=np.float64)/self.n_frames
+                frame_weights = np.ones(n_predict_frames,dtype=np.float64)/n_predict_frames
             else:
                 if (self.verbose==True):
                     print("Using user provided frame weights")
