@@ -4,12 +4,12 @@ import warnings
 warnings.filterwarnings('ignore')
 import random
 # the following are local libraries
-import torch_align
-import torch_uniform_sgmm_lib
-import torch_kronecker_sgmm_lib
-#from . import torch_align
-#from . import torch_uniform_sgmm_lib                            
-#from . import torch_kronecker_sgmm_lib  
+#import torch_align
+#import torch_uniform_sgmm_lib
+#import torch_kronecker_sgmm_lib
+from . import torch_align
+from . import torch_uniform_sgmm_lib                            
+from . import torch_kronecker_sgmm_lib  
 
 # class
 class ShapeGMMTorch:

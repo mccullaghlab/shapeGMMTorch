@@ -2,8 +2,8 @@ import numpy as np
 import time
 import sys
 import torch
-import torch_sgmm
-#from . import torch_sgmm
+#import torch_sgmm
+from . import torch_sgmm
 
 def cross_validate_cluster_scan(traj_data, n_train_frames, frame_weights = [], covar_type="kronecker", cluster_array = np.arange(2,9,1).astype(int), n_training_sets=10, n_attempts = 5, dtype=torch.float32, device=torch.device("cuda:0")):
     """

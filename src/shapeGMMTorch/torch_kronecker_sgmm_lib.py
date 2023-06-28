@@ -2,8 +2,8 @@ import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
 import random
-import torch_align
-#from . import torch_align
+#import torch_align
+from . import torch_align
 import torch
 
 GAMMA_THRESH = 1e-15
