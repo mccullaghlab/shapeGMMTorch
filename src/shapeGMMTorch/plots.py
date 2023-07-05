@@ -1,10 +1,11 @@
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 #make a plot of log likelihood as a function of number of clusters along with the second derivative of that curve
 def plot_log_likelihood_with_dd(axis,cluster_array,train_log_lik,valid_log_lik,fontsize=16,xlabel=True,ylabel1=True,ylabel2=True):
     """
-    Plot log likelihood as a function of number of clusters for both training and cross validation.  Also compute and plot the second derivative of the training set data.
+    Plot log likelihood as a function of number of clusters for both training and cross validation.  These will be computed as the average over provided training sets.  Also compute and plot the second derivative of the training set data.
     Inputs:
         axis                    (required)  : matplotlib axis object
         cluster_array           (required)  : (n_clusters) int numpy array of number of clusters (x-values for this plot)
@@ -40,9 +41,9 @@ def plot_log_likelihood_with_dd(axis,cluster_array,train_log_lik,valid_log_lik,f
         axis.set_ylabel("Log Likelihood per Frame",fontsize=fontsize)
     if ylabel2==True:
         ax2.set_ylabel("Second Derivative",fontsize=fontsize,color=colors[1])
-        ax2.tick_params(axis='both',labelsize=fontsize,labelcolor=colors[1])
     if xlabel==True:
         axis.set_xlabel("Number of Clusters",fontsize=fontsize)
+    ax2.tick_params(axis='both',labelsize=fontsize,labelcolor=colors[1])
     axis.tick_params(axis='both',labelsize=fontsize)
     axis.legend(fontsize=fontsize)
 

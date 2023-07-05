@@ -7,7 +7,7 @@ from . import torch_sgmm
 
 def cross_validate_cluster_scan(traj_data, n_train_frames, frame_weights = [], covar_type="kronecker", cluster_array = np.arange(2,9,1).astype(int), n_training_sets=10, n_attempts = 5, dtype=torch.float32, device=torch.device("cuda:0")):
     """
-    perform cross validation weighted shape-GMM for range of cluster sizes
+    perform cross validation weighted shape-GMM for range of cluster sizes. Return train and CV log likelihoods as a function of number of clusters for each training set.
     Inputs:
         traj_data                    (required)  : float64 array with dimensions (n_frames, n_atoms,3) of molecular configurations
         n_train_frames               (required)  : int     scalar dictating number of frames to use as training (rest is used for CV)
@@ -93,7 +93,7 @@ def sgmm_fit_with_attempts(train_data, n_clusters, n_attempts, frame_weights = [
         shapeGMM object with max log likelhood from attempts
     """
     # meta data from input array
-    n_frames = traj_data.shape[0]
+    n_frames = train_data.shape[0]
     # set parameters
     print("Number of training frames:", n_frames)
     print("Number of clusters:", n_clusters)

@@ -51,7 +51,7 @@ class ShapeGMMTorch:
         self._gmm_fit_flag = False                              # boolean tracking if GMM has been fit.
 
     # fit the model
-    def fit(self, traj_data, clusters_ids = [], frame_weights = []):
+    def fit(self, traj_data, cluster_ids = [], frame_weights = []):
         """
         Fit size-and-shape GMM using traj_data as the training data.
         traj_data     (required) - (n_frames, n_atoms, 3) float32 or float64 numpy array of particle positions. 
