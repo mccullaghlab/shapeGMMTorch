@@ -75,10 +75,10 @@ A standard fit can be performed in the following manner:
 
 `kronecker_aligned_trajectory = wsgmm.fit(train_positions)`
 
-where `train_positions` is an array of dimensions `(n_training_frames, n_atoms, 3)`. Notice there is no difference in syntax when fitting the two covariance types.  Two additional options are available during the fit routine which may be necessary under certain situations:
+where `train_positions` is an array of dimensions `(n_train_frames, n_atoms, 3)`. Notice there is no difference in syntax when fitting the two covariance types.  Two additional options are available during the fit routine which may be necessary under certain situations:
 
-	- cluster_ids   (optional) - (n_training_frames) integer array of initial cluster ids.  This option is necessary if init_cluster_method = 'read'
-	- frame_weights (optional) - (n_training_frames) float array of relative frame weights.  If none are provided the code assumes equal weights for all frames.
+	- cluster_ids   (optional) - (n_train_frames) integer array of initial cluster ids.  This option is necessary if init_cluster_method = 'read'
+	- frame_weights (optional) - (n_train_frames) float array of relative frame weights.  If none are provided the code assumes equal weights for all frames.
 
 If these options are used the fit call looks like
 
@@ -96,7 +96,7 @@ Once the shapeGMM object has been fit, it can be used to precict cluster IDs, al
 
 where `predict_positions` is an array of dimensions `(n_predict_frames, n_atoms, 3)`. Notice there is no difference in syntax when precicting the two covariance types.  If the predict frames have a non-unifrom frame weight, this can be accounted for  
 
-	- frame_weights (optional) - (n_training_frames) float array of relative frame weights.  If none are provided the code assumes equal weights for all frames.
+	- frame_weights (optional) - (n_train_frames) float array of relative frame weights.  If none are provided the code assumes equal weights for all frames.
 
 If this option is used the predict call will look like
 
