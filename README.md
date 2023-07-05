@@ -32,6 +32,12 @@ or by downloading from github and then running
 
 `python setup.py install`
 
+### Installation on a MAC
+
+I have found that PyTorch does not work on a mac using standard `pip install torch` or conda.  Instead, you have to create a special `nomkl` conda environment and install all necessary packages in there.  There are various blogs and/or stack overflow threads on this.
+
+After the `nomkl` conda environment has been created and all dependencies have been added to that environment, shapeGMMTorch can be installed.  Only the `torch.device("cpu")` device will work on a mac, however.
+
 ## Usage 
 
 This package is designed to mimic the usage of the sklearn package.  You first initiliaze the object and then fit.  Predict can be done once the model is fit.  Fit and ppredict functions take particle position trajectories as input in the form of a `(n_frames, n_atoms, 3)` numpy array.
@@ -40,11 +46,11 @@ This package is designed to mimic the usage of the sklearn package.  You first i
 
 `from shapeGMMTorch import torch_sgmm`
 
-Uniform (spherical, uncorrelated) covariance:
+Uniform covariance (spherical, uncorrelated, homogeneous):
 
 `usgmm = torch_sgmm.ShapeGMMTorch(n_clusters, covar_type = 'uniform', verbose=True)`
 
-Weighted (Kronecker product) covariance:
+Kronecker product covariance (formerly call weighted covariance; spherical, correlated, heterogeneous):
 
 `wsgmm = torch_sgmm.ShapeGMMTorch(n_clusters, covar_type = 'kronecker', verbose=True)`
 
@@ -63,26 +69,51 @@ During initialization, the following options are availble:
 
 ### Fit:
 
-`uniform_aligned_trajectory = usgmm.fit(training_set_positions)`
+A standard fit can be performed in the following manner:
 
-`kronecker_aligned_trajectory = wsgmm.fit(training_set_positions)`
+`uniform_aligned_trajectory = usgmm.fit(train_positions)`
+
+`kronecker_aligned_trajectory = wsgmm.fit(train_positions)`
+
+where `train_positions` is an array of dimensions `(n_training_frames, n_atoms, 3)`. Notice there is no difference in syntax when fitting the two covariance types.  Two additional options are available during the fit routine which may be necessary under certain situations:
+
+	- cluster_ids   (optional) - (n_training_frames) integer array of initial cluster ids.  This option is necessary if init_cluster_method = 'read'
+	- frame_weights (optional) - (n_training_frames) float array of relative frame weights.  If none are provided the code assumes equal weights for all frames.
+
+If these options are used the fit call looks like
+
+`uniform_aligned_trajectory = usgmm.fit(train_positions, cluster_ids = initial_cluster_ids, frame_weights = train_frame_weights)`
+
+`kronecker_aligned_trajectory = wsgmm.fit(train_positions, cluster_ids = initial_cluster_ids, frame_weights = train_frame_weights)`
 
 ### Predict:
 
+Once the shapeGMM object has been fit, it can be used to precict cluster IDs, aligned trajectory, and log likelihood per frame for a new, or cross validation, trajectory.  The number of atoms must remain the same.  The simple syntax is as follows:
 
-`clusters, aligned_traj, log_likelihood = usgmm.predict(full_trajectory_positions)`
+`cluster_ids, aligned_traj, log_likelihood = usgmm.predict(predict_positions)`
 
-`clusters, aligned_traj, log_likelihood = wsgmm.predict(full_trajectory_positions)`
+`clusters_ids, aligned_traj, log_likelihood = wsgmm.predict(predict_positions)`
+
+where `predict_positions` is an array of dimensions `(n_predict_frames, n_atoms, 3)`. Notice there is no difference in syntax when precicting the two covariance types.  If the predict frames have a non-unifrom frame weight, this can be accounted for  
+
+	- frame_weights (optional) - (n_training_frames) float array of relative frame weights.  If none are provided the code assumes equal weights for all frames.
+
+If this option is used the predict call will look like
+
+`cluster_ids, aligned_traj, log_likelihood = usgmm.predict(predict_positions, frame_weights = predict_frame_weights)`
+
+`clusters_ids, aligned_traj, log_likelihood = wsgmm.predict(predict_positions, frame_weights = predict_frame_weights)`
 
 ## Attributes
 
 After being properly fit, a shapeGMM object will have the following attributes:
 
 	- n_clusters		- integer of how many clusters were used in training
-	- n_atoms           	- integer of how many atoms were in the training data
-	- clusters              - integer array of cluster ids for training data
-	- log_likelihood        - float log likelihood of training set
-	- weights               - (n_clusters) float array of cluster weights
+	- n_atoms           - integer of how many atoms were in the training data
+	- n_train_frames    - integer of how many frames were in the training data
+	- clusters_ids      - integer array of cluster ids for training data
+	- log_likelihood    - float log likelihood of training set
+	- weights           - (n_clusters) float array of cluster weights
 	- centers	      	- (n_clusters, n_atoms, 3) float array of cluster centers/averages
 
 Uniform covariance specific attributes

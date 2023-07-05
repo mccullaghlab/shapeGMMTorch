@@ -12,7 +12,7 @@ GAMMA_THRESH = 1e-15
 def kronecker_sgmm_log_likelihood(traj_tensor, clusters, thresh=1e-3, dtype=torch.float32, device=torch.device("cuda:0")):
     # meta data from inputs
     n_frames = traj_tensor.shape[0]
-    n_clusters = np.amax(clusters) + 1
+    n_clusters = np.unique(clusters).shape[0] 
     n_atoms = traj_tensor.shape[1]
     n_dim = traj_tensor.shape[2]
     n_features = n_atoms*n_dim

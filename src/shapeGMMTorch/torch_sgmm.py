@@ -51,11 +51,11 @@ class ShapeGMMTorch:
         self._gmm_fit_flag = False                              # boolean tracking if GMM has been fit.
 
     # fit the model
-    def fit(self, traj_data, clusters = [], frame_weights = []):
+    def fit(self, traj_data, clusters_ids = [], frame_weights = []):
         """
         Fit size-and-shape GMM using traj_data as the training data.
         traj_data     (required) - (n_frames, n_atoms, 3) float32 or float64 numpy array of particle positions. 
-        clusters      (optional) - (n_frames) integer numpy array of initial cluster assignments.  
+        cluster_ids   (optional) - (n_frames) integer numpy array of initial cluster assignments.  
         frame_weights (optional) - (n_frames) float numpy array of frame weights
 
         Returns an aligned trajectory, if requested.  Each cluster aligned to respective average.
@@ -65,12 +65,12 @@ class ShapeGMMTorch:
         traj_tensor = torch.tensor(traj_data,dtype=self.dtype,device=self.device)
         # Initialize clusters if they have not been already
         if (self._init_clusters_flag == False):
-            self._init_clusters(traj_tensor, clusters)
+            self._init_clusters(traj_tensor, cluster_ids)
         # frame weights
         if frame_weights == []:
             if (self.verbose==True):
                 print("Setting uniform frame weights")
-            self.frame_weights = np.ones(self.n_frames,dtype=np.float64)/self.n_frames
+            self.frame_weights = np.ones(self.n_train_frames,dtype=np.float64)/self.n_training_frames
         else:
             if (self.verbose==True):
                 print("Using user provided frame weights")
@@ -93,9 +93,9 @@ class ShapeGMMTorch:
 
         # compute average and covariance of initial clustering
         for k in range(self.n_clusters):
-            indeces = np.argwhere(self.clusters == k).flatten()
+            indeces = np.argwhere(self.cluster_ids == k).flatten()
             # initialize weights as populations of clusters
-            self.weights[k] = indeces.size/self.n_frames
+            self.weights[k] = indeces.size/self.n_train_frames
             if self.covar_type == 'uniform':
                 centers_tensor[k], vars_tensor[k] = torch_align.torch_iterative_align_uniform_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,device=self.device,dtype=self.dtype)[1:]
             else:
@@ -132,14 +132,14 @@ class ShapeGMMTorch:
         if self.covar_type == 'uniform': 
             cluster_frame_ln_likelihoods_tensor =  torch_uniform_sgmm_lib.torch_sgmm_expectation_uniform(traj_tensor, centers_tensor, vars_tensor, device=self.device)
             # assign clusters based on largest likelihood 
-            self.clusters = torch.argmax(cluster_frame_ln_likelihoods_tensor, dim = 1).cpu().numpy()
+            self.cluster_ids = torch.argmax(cluster_frame_ln_likelihoods_tensor, dim = 1).cpu().numpy()
             traj_data, self.centers = self._align_clusters_uniform(traj_tensor,centers_tensor)
             self.vars = vars_tensor.cpu().numpy()
             del vars_tensor
         else: # assume Kronecker product covariance
             cluster_frame_ln_likelihoods_tensor =  torch_kronecker_sgmm_lib.torch_sgmm_expectation_kronecker(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, dtype=self.dtype, device=self.device)
             # assign clusters based on largest likelihood 
-            self.clusters = torch.argmax(cluster_frame_ln_likelihoods_tensor, dim = 1).cpu().numpy()
+            self.cluster_ids = torch.argmax(cluster_frame_ln_likelihoods_tensor, dim = 1).cpu().numpy()
             traj_data, self.centers = self._align_clusters_kronecker(traj_tensor,centers_tensor, precisions_tensor)
             self.precisions = precisions_tensor.cpu().numpy()
             self.lpdets = lpdets_tensor.cpu().numpy()
@@ -237,35 +237,35 @@ class ShapeGMMTorch:
             print("shapeGMM must be fit before it can predict.")
 
     # initialize clusters
-    def _init_clusters(self, traj_tensor, clusters=[]):
+    def _init_clusters(self, traj_tensor, cluster_ids=[]):
         
         # get metadata
-        self.n_frames = int(traj_tensor.shape[0])
+        self.n_train_frames = int(traj_tensor.shape[0])
         self.n_atoms = traj_tensor.shape[1]
         self.n_dim = traj_tensor.shape[2]
         self.n_features = self.n_dim*self.n_atoms
         if (self.verbose == True):
             # print metadata to stdout
-            print("Number of frames being analyzed:", self.n_frames)
+            print("Number of frames being analyzed:", self.n_train_frames)
             print("Number of particles being analyzed:", self.n_atoms)
             print("Number of dimensions (must be 3):", self.n_dim)
             print("Initializing clustering using method:", self.init_cluster_method)
         # declare clusters
-        self.clusters = np.zeros(self.n_frames,dtype=np.int32)
+        self.cluster_ids = np.zeros(self.n_train_frames,dtype=np.int32)
 
         # Remove the center-of-geometry from entire trajectory
         torch_align.torch_remove_center_of_geometry(traj_tensor)
 
         # make initial clustering based on input user choice (default is random)
         if (self.init_cluster_method == "chunk"):
-            for i in range(self.n_frames):
-                self.clusters[i] = i*self.n_clusters // self.n_frames
+            for i in range(self.n_train_frames):
+                self.cluster_ids[i] = i*self.n_clusters // self.n_train_frames
         elif (self.init_cluster_method == "read"):
             # should affirm that there are n_frames clusters
-            self.clusters = clusters
+            self.cluster_ids = cluster_ids
         else: # default is random
-            self.clusters = torch_uniform_sgmm_lib.init_random(traj_tensor,self.n_clusters,dtype=self.dtype, device=self.device)
-            #log_lik = torch_uniform_sgmm_lib.uniform_sgmm_log_likelihood(traj_tensor,self.clusters,device=self.device).cpu().numpy()
+            self.cluster_ids = torch_uniform_sgmm_lib.init_random(traj_tensor,self.n_clusters,dtype=self.dtype, device=self.device)
+            #log_lik = torch_uniform_sgmm_lib.uniform_sgmm_log_likelihood(traj_tensor,self.cluster_ids,device=self.device).cpu().numpy()
         # clusters have been initialized
         self._init_clusters_flag = True
 
@@ -278,7 +278,7 @@ class ShapeGMMTorch:
             centers_tensor = torch_align.torch_align_uniform(centers_tensor, global_center_tensor)
             # align each cluster to its average
             for k in range(self.n_clusters):
-                indeces = np.argwhere(self.clusters == k).flatten()
+                indeces = np.argwhere(self.cluster_ids == k).flatten()
                 traj_tensor[indeces] = torch_align.torch_align_uniform(traj_tensor[indeces], centers_tensor[k])
             return traj_tensor.cpu().numpy(), centers_tensor.cpu().numpy()
         else:
@@ -292,7 +292,7 @@ class ShapeGMMTorch:
             centers_tensor = torch_align.torch_align_kronecker(centers_tensor, global_center_tensor, global_precision_tensor, dtype=self.dtype, device=self.device)
             # align each cluster to its average
             for k in range(self.n_clusters):
-                indeces = np.argwhere(self.clusters == k).flatten()
+                indeces = np.argwhere(self.cluster_ids == k).flatten()
                 traj_tensor[indeces] = torch_align.torch_align_kronecker(traj_tensor[indeces], centers_tensor[k], precisions_tensor[k], dtype=self.dtype, device=self.device)
             return traj_tensor.cpu().numpy(), centers_tensor.cpu().numpy()
         else:
@@ -305,13 +305,13 @@ class ShapeGMMTorch:
             sort_key = np.argsort(self.weights)[::-1]
             cluster_ids = np.arange(self.n_clusters).astype(int)
             sorted_cluster_ids = cluster_ids[sort_key]
-            new_clusters = np.empty(self.n_frames,dtype=int)
-            for frame in range(self.n_frames):
-                new_clusters[frame] = np.argwhere(sorted_cluster_ids == self.clusters[frame])
+            new_clusters = np.empty(self.n_train_frames,dtype=int)
+            for frame in range(self.n_train_frames):
+                new_clusters[frame] = np.argwhere(sorted_cluster_ids == self.cluster_ids[frame])
             # repopulate object
             self.centers    = self.centers[sort_key]
             self.weights    = self.weights[sort_key]
-            self.clusters   = new_clusters
+            self.cluster_ids   = new_clusters
             if self.covar_type == "uniform":
                 self.vars = self.vars[sort_key]
             else:

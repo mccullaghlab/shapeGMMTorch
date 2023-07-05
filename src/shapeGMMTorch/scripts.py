@@ -76,4 +76,43 @@ def cross_validate_cluster_scan(traj_data, n_train_frames, frame_weights = [], c
     #return
     return weighted_train_log_lik, weighted_predict_log_lik
 
+def sgmm_fit_with_attempts(train_data, n_clusters, n_attempts, frame_weights = [], covar_type='kronecker', dtype=torch.float32, device=torch.device("cuda:0")):
+    """
+    Initialize and fit shapeGMM object with training data but do so a number of times and return the max log likelihood object
+
+    Arguments:
+        train_data (required)   - (n_train_frames,n_atoms,3) float array containing training data
+        n_clusters (required)   - integer number of clusters must be input
+        n_attempts (required)   - integer dictating the number of random intializations to attempt
+        frame_weights (optional)- (n_train_frames) float array containing relative frame weights.  Defaults to empty (uniform weights)
+        covar_type              - string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'kronecker'.
+        dtype                   - Data type to be used.  Default is torch.float32.
+        device                  - device to be used.  Default is torch.device('cuda:0') device.
+
+    Returns:
+        shapeGMM object with max log likelhood from attempts
+    """
+    # meta data from input array
+    n_frames = traj_data.shape[0]
+    # set parameters
+    print("Number of training frames:", n_frames)
+    print("Number of clusters:", n_clusters)
+    print("Number of attempts:", n_attempts)
+    sys.stdout.flush()
+    objs = []
+    log_likes = []
+    # print log info
+    print("%8s %19s %15s" % ("Attempt", "Log Like per Frame","CPU Time (s)"))
+    print("%50s" % ("--------------------------------------------------"))
+    #
+    for i in range(n_attempts):
+        start_time = time.process_time()
+        wsgmm = torch_sgmm.ShapeGMMTorch(n_clusters,covar_type=covar_type, dtype=dtype, device=device)
+        wsgmm.fit(train_data, frame_weights = frame_weights)
+        elapsed_time = time.process_time()-start_time
+        print("%8d %19.3f %15.3f" % (i+1, np.round(wsgmm.log_likelihood,3), np.round(elapsed_time,3)))
+        objs.append(wsgmm)
+        log_likes.append(wsgmm.log_likelihood)
+    # return obj with max log likelihood per frame
+    return objs[np.argmax(log_likes)]
 
