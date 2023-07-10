@@ -67,7 +67,7 @@ class ShapeGMMTorch:
         if (self._init_clusters_flag == False):
             self._init_clusters(traj_tensor, cluster_ids)
         # frame weights
-        if frame_weights == []:
+        if len(frame_weights) == 0:
             if (self.verbose==True):
                 print("Setting uniform frame weights")
             self.frame_weights = np.ones(self.n_train_frames,dtype=np.float64)/self.n_train_frames
@@ -145,6 +145,7 @@ class ShapeGMMTorch:
             self.lpdets = lpdets_tensor.cpu().numpy()
             del precisions_tensor
             del lpdets_tensor
+        self.train_frame_log_likelihood = (frame_weights_tensor*torch.logsumexp(cluster_frame_ln_likelihoods_tensor,1)).cpu().numpy()
         del traj_tensor
         del ln_weights_tensor
         del cluster_frame_ln_likelihoods_tensor
@@ -186,7 +187,7 @@ class ShapeGMMTorch:
                 # declare array for log determinants for each clusters
                 lpdets_tensor = torch.tensor(self.lpdets, dtype=torch.float64,device=self.device)
             # frame weights
-            if frame_weights == []:
+            if len(frame_weights) == 0:
                 if (self.verbose==True):
                     print("Assuming uniform frame weights")
                 frame_weights = np.ones(n_predict_frames,dtype=np.float64)/n_predict_frames
@@ -208,8 +209,8 @@ class ShapeGMMTorch:
                 cluster_frame_ln_likelihoods_tensor = torch_kronecker_sgmm_lib.torch_sgmm_expectation_kronecker(traj_tensor, centers_tensor, precisions_tensor, lpdets_tensor, dtype=self.dtype, device=self.device)
             for k in range(self.n_clusters):
                 cluster_frame_ln_likelihoods_tensor[:,k] += ln_weights_tensor[k]
-            log_norm = torch.logsumexp(cluster_frame_ln_likelihoods_tensor,1)
-            log_likelihood = torch.sum(frame_weights_tensor*log_norm,0).cpu().numpy()
+            self.predict_frame_log_likelihood = (frame_weights_tensor*torch.logsumexp(cluster_frame_ln_likelihoods_tensor,1)).cpu().numpy()
+            log_likelihood = np.sum(self.predict_frame_log_likelihood)
             # assign clusters based on largest likelihood (probability density)
             clusters = torch.argmax(cluster_frame_ln_likelihoods_tensor, dim = 1).cpu().numpy()
             # align each cluster to its average
@@ -261,7 +262,7 @@ class ShapeGMMTorch:
             for i in range(self.n_train_frames):
                 self.cluster_ids[i] = i*self.n_clusters // self.n_train_frames
         elif (self.init_cluster_method == "read"):
-            # should affirm that there are n_frames clusters
+            # should affirm that there are n_train_frames clusters
             self.cluster_ids = cluster_ids
         else: # default is random
             self.cluster_ids = torch_uniform_sgmm_lib.init_random(traj_tensor,self.n_clusters,dtype=self.dtype, device=self.device)

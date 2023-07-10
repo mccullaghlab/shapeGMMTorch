@@ -46,7 +46,7 @@ def cross_validate_cluster_scan(traj_data, n_train_frames, frame_weights = [], c
         # create training and predict data
         train_data = traj_data[index_array[:n_train_frames]]
         predict_data = traj_data[index_array[n_train_frames:]]
-        if frame_weights == []:
+        if len(frame_weights) == 0:
             train_frame_weights = []
             predict_frame_weights = []
         else:
@@ -57,7 +57,12 @@ def cross_validate_cluster_scan(traj_data, n_train_frames, frame_weights = [], c
             w_log_lik = []
             w_objs = []
             # for each n_clusters and training set, perform shape-GMM n_attempts times and take object with largest log likelihood
-            for attempt in range(n_attempts):
+            # if cluster size is 1 there is no need to do multiple attempts
+            if cluster_size == 1:
+                current_attempts = 1
+            else:
+                current_attempts = n_attempts
+            for attempt in range(current_attempts):
                 start_time = time.process_time()
                 wsgmm = torch_sgmm.ShapeGMMTorch(cluster_size, covar_type=covar_type, dtype=dtype, device=device)
                 wsgmm.fit(train_data, frame_weights=train_frame_weights)
