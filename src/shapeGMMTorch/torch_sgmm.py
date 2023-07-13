@@ -147,7 +147,11 @@ class ShapeGMMTorch:
             self.lpdets = lpdets_tensor.cpu().numpy()
             del precisions_tensor
             del lpdets_tensor
-        self.train_frame_log_likelihood = (frame_weights_tensor*torch.logsumexp(cluster_frame_ln_likelihoods_tensor,1)).cpu().numpy()
+        # determine log likelihood per frame and save it
+        for k in range(self.n_clusters):
+            cluster_frame_ln_likelihoods_tensor[:,k] += ln_weights_tensor[k]
+        self.train_frame_log_likelihood = (torch.logsumexp(cluster_frame_ln_likelihoods_tensor,1)).cpu().numpy()
+        # delete data
         del traj_tensor
         del ln_weights_tensor
         del cluster_frame_ln_likelihoods_tensor
