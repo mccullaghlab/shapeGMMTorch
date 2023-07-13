@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: shapeGMMTorch
-Version: 1.0.1
+Version: 1.5.1
 Summary: Gaussian Mixture Model clustering in size-and-shape space using PyTorch
 Home-page: https://github.com/mccullaghlab/shapeGMMTorch
 Author: Martin McCullagh
@@ -112,7 +112,7 @@ Once the shapeGMM object has been fit, it can be used to precict cluster IDs, al
 
 where `predict_positions` is an array of dimensions `(n_predict_frames, n_atoms, 3)`. Notice there is no difference in syntax when precicting the two covariance types.  If the predict frames have a non-unifrom frame weight, this can be accounted for  
 
-	- frame_weights (optional) - (n_train_frames) float array of relative frame weights.  If none are provided the code assumes equal weights for all frames.
+	- frame_weights (optional) - (n_predict_frames) float array of relative frame weights.  If none are provided the code assumes equal weights for all frames.
 
 If this option is used the predict call will look like
 
@@ -124,13 +124,13 @@ If this option is used the predict call will look like
 
 After being properly fit, a shapeGMM object will have the following attributes:
 
-	- n_clusters		- integer of how many clusters were used in training
+	- n_clusters	    - integer of how many clusters were used in training
 	- n_atoms           - integer of how many atoms were in the training data
 	- n_train_frames    - integer of how many frames were in the training data
 	- clusters_ids      - integer array of cluster ids for training data
 	- log_likelihood    - float log likelihood of training set
 	- weights           - (n_clusters) float array of cluster weights
-	- centers	      	- (n_clusters, n_atoms, 3) float array of cluster centers/averages
+	- centers	        - (n_clusters, n_atoms, 3) float array of cluster centers/averages
 
 Uniform covariance specific attributes
 

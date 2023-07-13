@@ -63,6 +63,8 @@ class ShapeGMMTorch:
 
         # pass trajectory data to device
         traj_tensor = torch.tensor(traj_data,dtype=self.dtype,device=self.device)
+        # Remove the center-of-geometry from entire trajectory
+        torch_align.torch_remove_center_of_geometry(traj_tensor)
         # Initialize clusters if they have not been already
         if (self._init_clusters_flag == False):
             self._init_clusters(traj_tensor, cluster_ids)
@@ -253,9 +255,6 @@ class ShapeGMMTorch:
             print("Initializing clustering using method:", self.init_cluster_method)
         # declare clusters
         self.cluster_ids = np.zeros(self.n_train_frames,dtype=np.int32)
-
-        # Remove the center-of-geometry from entire trajectory
-        torch_align.torch_remove_center_of_geometry(traj_tensor)
 
         # make initial clustering based on input user choice (default is random)
         if (self.init_cluster_method == "chunk"):

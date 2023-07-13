@@ -12,6 +12,7 @@
 # ignore build directory
 build
 dist
+debug
 # pycache
 __pycache__
 

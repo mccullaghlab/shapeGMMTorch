@@ -6,7 +6,7 @@ import random
 from . import torch_align
 import torch
 
-GAMMA_THRESH = 1e-15
+GAMMA_THRESH = 1e-20
 
 ##
 def kronecker_sgmm_log_likelihood(traj_tensor, clusters, thresh=1e-3, dtype=torch.float32, device=torch.device("cuda:0")):
@@ -69,21 +69,23 @@ def torch_sgmm_kronecker_em(traj_tensor, frame_weights_tensor, centers_tensor, p
     for k in range(n_clusters):
         cluster_frame_ln_likelihoods_tensor[:,k] += ln_weights_tensor[k]
     log_norm = torch.logsumexp(cluster_frame_ln_likelihoods_tensor,1)
-    log_likelihood = torch.sum(frame_weights_tensor*log_norm,0)
+    #log_likelihood = torch.sum(frame_weights_tensor*log_norm,0)
+    log_likelihood = torch.mean(log_norm)
     # determine gamma values
     # use the current values for the parameters to evaluate the posterior
     # probabilities of the data to have been generanted by each gaussian
     gamma_tensor = torch.exp(cluster_frame_ln_likelihoods_tensor - log_norm.view(-1,1))
     # multiply gamma by frame weights
-    gamma_tensor *= frame_weights_tensor.view(-1,1)
+    #gamma_tensor *= frame_weights_tensor.view(-1,1)
     # update the weights
-    ln_weights_tensor = torch.log(torch.sum(gamma_tensor,0))
+    #ln_weights_tensor = torch.log(torch.sum(gamma_tensor,0))
+    ln_weights_tensor = torch.log(torch.mean(gamma_tensor,0))
     # update averages and variances of each cluster
     for k in range(n_clusters):
         gamma_indeces = torch.argwhere(gamma_tensor[:,k] > gamma_thresh_tensor).flatten()
         if gamma_indeces.shape[0] > n_atoms:
             # update mean and variance
-            centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[gamma_indeces], gamma_tensor[gamma_indeces,k].to(dtype), ref_tensor=centers_tensor[k], ref_precision_tensor=precisions_tensor[k], dtype=dtype, thresh=thresh, device=device)[1:]
+            centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[gamma_indeces], gamma_tensor[gamma_indeces,k], ref_tensor=centers_tensor[k], ref_precision_tensor=precisions_tensor[k], dtype=dtype, thresh=thresh, device=device)[1:]
     return centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, log_likelihood    
     del cluster_frame_ln_likelihoods
     del log_lorm

@@ -197,6 +197,15 @@ def _torch_pseudo_lndet(sigma, EigenValueThresh=1e-10):
     lpdet = torch.sum(torch.log(e))
     return lpdet
 
+# determine the pseudo inverse and ln(det) of a singular matrix ignoring first eigenvalue
+def _torch_pseudo_inv(sigma,device=torch.device("cuda:0")):
+    e, v = torch.linalg.eigh(sigma) 
+    inv = torch.zeros(sigma.shape,dtype=torch.float64,device=device)
+    for i in range(sigma.shape[0]-1):
+        inv += 1.0/e[i+1]*torch.outer(v[:,i+1],v[:,i+1])
+    lpdet = torch.sum(torch.log(e[1:]))
+    return inv, lpdet
+
 def _torch_kronecker_log_lik(disp, precision, lpdet):
     # meta data
     n_frames = disp.shape[0]
@@ -238,8 +247,9 @@ def torch_iterative_align_kronecker(traj_tensor, stride=1024, dtype=torch.float3
             covar += torch.sum(torch.matmul(disp[frame:upper_limit],torch.transpose(disp[frame:upper_limit],1,2)),0)
         covar *= covar_norm
         # log likelihood
-        precision = torch.linalg.pinv(covar, atol=1e-10, hermitian= True)
-        lpdet = _torch_pseudo_lndet(covar)
+        #precision = torch.linalg.pinv(covar, atol=1e-10, hermitian= True)
+        #lpdet = _torch_pseudo_lndet(covar)
+        precision, lpdet =  _torch_pseudo_inv(covar,device=device)
         log_lik = _torch_kronecker_log_lik(disp, precision, lpdet)
         delta_log_lik = abs(log_lik - old_log_lik)
         if verbose == True:
@@ -304,8 +314,9 @@ def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_ten
             covar += torch.sum(torch.matmul(disp[frame:upper_limit],torch.transpose(disp[frame:upper_limit],1,2))*weight_tensor[frame:upper_limit].view(-1,1,1),0)
         covar *= covar_norm
         # log likelihood
-        precision = torch.linalg.pinv(covar, atol=1e-10, hermitian= True)
-        lpdet = _torch_pseudo_lndet(covar)
+        #precision = torch.linalg.pinv(covar, atol=1e-10, hermitian= True)
+        #lpdet = _torch_pseudo_lndet(covar)
+        precision, lpdet =  _torch_pseudo_inv(covar,device=device)
         log_lik = _torch_kronecker_weighted_log_lik(disp, weight_tensor, precision, lpdet)
         delta_log_lik = abs(log_lik - old_log_lik)
         if verbose == True:
