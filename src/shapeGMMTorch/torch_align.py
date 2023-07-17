@@ -4,8 +4,8 @@
 import numpy as np
 import torch
 import importlib
-# check to see if fast SVD library is available
-svd_loader = importlib.util.find_spec('torch_bath_svd')
+# check to see if SVD library is available
+svd_loader = importlib.util.find_spec('torch_batch_svd')
 if svd_loader is not None:
     from torch_batch_svd import svd
     def torch_align_rot_mat(traj_tensor, ref_tensor):
@@ -199,11 +199,16 @@ def _torch_pseudo_lndet(sigma, EigenValueThresh=1e-10):
 
 # determine the pseudo inverse and ln(det) of a singular matrix ignoring first eigenvalue
 def _torch_pseudo_inv(sigma,device=torch.device("cuda:0")):
+    # diagonalize sigma
     e, v = torch.linalg.eigh(sigma) 
-    inv = torch.zeros(sigma.shape,dtype=torch.float64,device=device)
-    for i in range(sigma.shape[0]-1):
-        inv += 1.0/e[i+1]*torch.outer(v[:,i+1],v[:,i+1])
+    # compute the log of the pseudo determinant of sigma
     lpdet = torch.sum(torch.log(e[1:]))
+    # now compute multiplicative reciprocal of eigenvalues except first
+    e[1:] = torch.reciprocal(e[1:])
+    # set first eigenvalue/recirpical to zero
+    e[0] = 0.0
+    # construct the inverse
+    inv = torch.matmul(v,torch.matmul(torch.diag(e),v.T))
     return inv, lpdet
 
 def _torch_kronecker_log_lik(disp, precision, lpdet):
@@ -239,16 +244,14 @@ def torch_iterative_align_kronecker(traj_tensor, stride=1024, dtype=torch.float3
         traj_tensor = torch.matmul(traj_tensor,rot_mat)
         # compute new average
         avg = torch.mean(traj_tensor,0,False)
-        disp = (traj_tensor - avg).to(torch.float64)
         # compute covar using strided data
         covar = torch.zeros((n_atoms,n_atoms),dtype=torch.float64,device=device)
+        disp = (traj_tensor - avg).to(torch.float64)
         for frame in range(0,n_frames,stride):
             upper_limit = min(frame+stride,n_frames)
             covar += torch.sum(torch.matmul(disp[frame:upper_limit],torch.transpose(disp[frame:upper_limit],1,2)),0)
         covar *= covar_norm
         # log likelihood
-        #precision = torch.linalg.pinv(covar, atol=1e-10, hermitian= True)
-        #lpdet = _torch_pseudo_lndet(covar)
         precision, lpdet =  _torch_pseudo_inv(covar,device=device)
         log_lik = _torch_kronecker_log_lik(disp, precision, lpdet)
         delta_log_lik = abs(log_lik - old_log_lik)
@@ -306,16 +309,14 @@ def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_ten
         traj_tensor = torch.matmul(traj_tensor,rot_mat)
         # compute new average
         avg = torch.sum((traj_tensor*weight_tensor.view(-1,1,1)),0,False)
-        disp = (traj_tensor - avg).to(torch.float64)
         # compute covar using strided data
         covar = torch.zeros((n_atoms,n_atoms),dtype=torch.float64,device=device)
+        disp = (traj_tensor - avg).to(torch.float64)
         for frame in range(0,n_frames,stride):
             upper_limit = min(frame+stride,n_frames)
             covar += torch.sum(torch.matmul(disp[frame:upper_limit],torch.transpose(disp[frame:upper_limit],1,2))*weight_tensor[frame:upper_limit].view(-1,1,1),0)
         covar *= covar_norm
         # log likelihood
-        #precision = torch.linalg.pinv(covar, atol=1e-10, hermitian= True)
-        #lpdet = _torch_pseudo_lndet(covar)
         precision, lpdet =  _torch_pseudo_inv(covar,device=device)
         log_lik = _torch_kronecker_weighted_log_lik(disp, weight_tensor, precision, lpdet)
         delta_log_lik = abs(log_lik - old_log_lik)
