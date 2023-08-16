@@ -29,7 +29,7 @@ This package is dependent on the following packages:
 3. torch>=1.11 (==1.11 if option 4 is used)
 4. Optional: torch_batch_svd available from https://github.com/KinglittleQ/torch-batch-svd
 
-The last package is for the SVD part of the alignment and is much faster than the native batch torch library.  It is, however, not compatible with the current version of torch (1.12) thus the requirement of torch 1.11.
+The last package is for the SVD part of the alignment and is faster than the native batch torch library for certain devices. I have found it to be slower than the torch native SVD for the latest hardware and software versions. 
 
 The examples are also dependent on:
 
