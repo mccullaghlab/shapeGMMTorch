@@ -253,10 +253,11 @@ def torch_iterative_align_kronecker(traj_tensor, stride=1024, dtype=torch.float3
         covar *= covar_norm
         # log likelihood
         precision, lpdet =  _torch_pseudo_inv(covar,device=device)
-        log_lik = _torch_kronecker_log_lik(disp, precision, lpdet)
+        #log_lik = _torch_kronecker_log_lik(disp, precision, lpdet)
+        log_lik = -1.5*lpdet
         delta_log_lik = abs(log_lik - old_log_lik)
         if verbose == True:
-            print(log_lik)
+            print(log_lik.cpu().numpy())
         old_log_lik = log_lik
         weighted_avg = torch.matmul(precision,avg.to(torch.float64)).to(dtype)
     # free up local variables 
@@ -318,10 +319,11 @@ def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_ten
         covar *= covar_norm
         # log likelihood
         precision, lpdet =  _torch_pseudo_inv(covar,device=device)
-        log_lik = _torch_kronecker_weighted_log_lik(disp, weight_tensor, precision, lpdet)
+        #log_lik = _torch_kronecker_weighted_log_lik(disp, weight_tensor, precision, lpdet)
+        log_lik = -1.5*lpdet
         delta_log_lik = abs(log_lik - old_log_lik)
         if verbose == True:
-            print(log_lik)
+            print(log_lik.cpu().numpy())
         old_log_lik = log_lik
         weighted_avg = torch.matmul(precision, avg.to(torch.float64)).to(dtype)     
     # free up local variables 
