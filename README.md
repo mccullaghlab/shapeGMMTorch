@@ -108,21 +108,23 @@ If this option is used the predict call will look like
 
 After being properly fit, a shapeGMM object will have the following attributes:
 
-	- n_clusters	    - integer of how many clusters were used in training
-	- n_atoms           - integer of how many atoms were in the training data
-	- n_train_frames    - integer of how many frames were in the training data
-	- clusters_ids      - integer array of cluster ids for training data
-	- log_likelihood    - float log likelihood of training set
-	- weights           - (n_clusters) float array of cluster weights
-	- centers	        - (n_clusters, n_atoms, 3) float array of cluster centers/averages
+	- n_clusters	             - integer of how many clusters were used in training
+	- n_atoms                    - integer of how many atoms were in the training data
+	- n_train_frames             - integer of how many frames were in the training data
+    - train_frame_weights        - float array of frane weights used in training 
+	- clusters_ids               - integer array of cluster ids for training data
+	- log_likelihood             - float log likelihood of training set
+    - train_frame_log_likelihood - float array of LLs for each frame
+	- weights                    - (n_clusters) float array of cluster weights
+	- centers	                 - (n_clusters, n_atoms, 3) float array of cluster centers/averages
 
 Uniform covariance specific attributes
 
-	- vars		       	- (n_clusters) float array of cluster variances
+	- vars		       	         - (n_clusters) float array of cluster variances
 
 Kronecker covariance specific attributes
 
-	- precisions	   	- (n_clusters, n_atoms, n_atoms) float array of cluster precisions (inverse covariances)
-	- lpdets	    	- (n_clusters) float array of ln(det(covar))
+	- precisions	   	         - (n_clusters, n_atoms, n_atoms) float array of cluster precisions (inverse covariances)
+	- lpdets	    	         - (n_clusters) float array of ln(det(covar))
 
 
