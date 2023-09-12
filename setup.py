@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name='shapeGMMTorch',
-    version='1.5.1',
+    version='1.5.2',
     author='Martin McCullagh',
     author_email='martin.mccullagh@okstate.edu',
     description='Gaussian Mixture Model clustering in size-and-shape space using PyTorch',
