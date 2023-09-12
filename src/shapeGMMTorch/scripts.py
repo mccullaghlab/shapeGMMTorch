@@ -72,7 +72,7 @@ def cross_validate_cluster_scan(traj_data, n_train_frames, frame_weights = [], c
                 print("%15d %15d %15d %19.3f %15.3f" % (training_set+1, cluster_size, attempt+1, np.round(wsgmm.log_likelihood,3), np.round(elapsed_time,3)))
                 sys.stdout.flush()
             # determine maximum
-            w_arg = np.argmax(w_log_lik)
+            w_arg = np.nanargmax(w_log_lik)
             # save training log likes
             weighted_train_log_lik[cluster_index,training_set] = w_log_lik[w_arg]
             # save prediction log likes
@@ -119,5 +119,5 @@ def sgmm_fit_with_attempts(train_data, n_clusters, n_attempts, frame_weights = [
         objs.append(wsgmm)
         log_likes.append(wsgmm.log_likelihood)
     # return obj with max log likelihood per frame
-    return objs[np.argmax(log_likes)]
+    return objs[np.nanargmax(log_likes)]
 

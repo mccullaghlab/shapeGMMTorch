@@ -150,7 +150,7 @@ class ShapeGMMTorch:
         for k in range(self.n_clusters):
             cluster_frame_ln_likelihoods_tensor[:,k] += ln_weights_tensor[k]
         self.train_frame_log_likelihood = (torch.logsumexp(cluster_frame_ln_likelihoods_tensor,1)).cpu().numpy()
-        self.log_likelihood = torch.sum(self.train_frame_weights*self.train_frame_log_likelihood)
+        self.log_likelihood = np.sum(self.train_frame_weights*self.train_frame_log_likelihood)
         # delete data
         del traj_tensor
         del ln_weights_tensor
