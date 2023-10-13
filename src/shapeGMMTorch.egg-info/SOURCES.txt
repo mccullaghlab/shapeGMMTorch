@@ -2,6 +2,7 @@ LICENSE
 README.md
 setup.py
 src/shapeGMMTorch/__init__.py
+src/shapeGMMTorch/generate.py
 src/shapeGMMTorch/plots.py
 src/shapeGMMTorch/scripts.py
 src/shapeGMMTorch/torch_align.py

@@ -10,6 +10,7 @@ import random
 from . import torch_align
 from . import torch_uniform_sgmm_lib                            
 from . import torch_kronecker_sgmm_lib  
+from . import generate
 
 # class
 class ShapeGMMTorch:
@@ -243,6 +244,26 @@ class ShapeGMMTorch:
         else:
             print("shapeGMM must be fit before it can predict.")
 
+    # generate a trajectory from shapeGMM object - no time correlation!
+    def generate(self,n_frames):
+        """
+        Generate a trajectory from a fit shapeGMM object using multivariate Gaussian generator (from scipy)
+        n_frames (required)     - int of number of frames to generater
+
+        Returns:
+        trajectory      - (n_frames, n_atoms, 3) float32 or float64 numpy array of particle positions generated from shapeGMM object. 
+        """
+
+        if self._gmm_fit_flag == True:
+            cluster_ids = cluster_ids_from_rand(np.random.rand(n_frames),self.weights)
+            trj = np.empty((n_frames,self.n_atoms,3))
+            for cluster_id in range(self.n_clusters):
+                indeces = np.argwhere(cluster_ids == cluster_id).flatten()
+                trj[indeces] = gen_mv(self.centers[cluster_id],cov_from_prec(self.precisions[cluster_id]),indeces.size)
+            return trj
+        else:
+            print("shapeGMM must be fit before it can generate.")
+        
     # initialize clusters
     def _init_clusters(self, traj_tensor, cluster_ids=[]):
         

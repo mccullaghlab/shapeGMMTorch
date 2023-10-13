@@ -230,7 +230,8 @@ def torch_iterative_align_kronecker(traj_tensor, stride=1024, dtype=torch.float3
     n_atoms = traj_tensor.shape[1]
     
     # pass constant to device
-    covar_norm = torch.tensor(1/(3*n_frames-1),dtype=torch.float64,device=device)
+    #covar_norm = torch.tensor(1/(3*n_frames-1),dtype=torch.float64,device=device)
+    covar_norm = torch.tensor(1/(n_frames-1),dtype=torch.float64,device=device)
     
     # initialize with average as the first frame (arbitrary choice)
     weighted_avg = traj_tensor[0]
@@ -299,7 +300,8 @@ def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_ten
     else:
         weighted_avg = torch.matmul(ref_precision_tensor, ref_tensor.to(torch.float64)).to(dtype)
     # pass normalization value to device
-    covar_norm = torch.tensor(1/3,dtype=torch.float64,device=device)
+    #covar_norm = torch.tensor(1/3,dtype=torch.float64,device=device)
+    covar_norm = torch.tensor(1.0,dtype=torch.float64,device=device)
     
     delta_log_lik = thresh+10
     old_log_lik = 0
