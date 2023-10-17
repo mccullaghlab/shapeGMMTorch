@@ -108,6 +108,9 @@ def torch_sgmm_expectation_kronecker(traj_tensor, centers_tensor, precisions_ten
         traj_tensor = torch_align.torch_align_kronecker(traj_tensor, centers_tensor[k], precisions_tensor[k],dtype=dtype, device=device)
         disp = (traj_tensor - centers_tensor[k]).to(torch.float64)
         # Determine square deviation of each frame aligned to each mean
+        #cluster_frame_ln_likelihoods[:,k] = (disp[:,:,0].view(n_frames,1,n_atoms) @ precisions_tensor[k] @ disp[:,:,0].view(n_frames,n_atoms,1) )[:,0,0]
+        #cluster_frame_ln_likelihoods[:,k] += (disp[:,:,1].view(n_frames,1,n_atoms) @ precisions_tensor[k] @ disp[:,:,1].view(n_frames,n_atoms,1))[:,0,0]
+        #cluster_frame_ln_likelihoods[:,k] += (disp[:,:,2].view(n_frames,1,n_atoms) @ precisions_tensor[k] @ disp[:,:,2].view(n_frames,n_atoms,1))[:,0,0]
         cluster_frame_ln_likelihoods[:,k] = torch.matmul(disp[:,:,0].view(n_frames,1,n_atoms),torch.matmul(precisions_tensor[k],disp[:,:,0].view(n_frames,n_atoms,1)))[:,0,0]
         cluster_frame_ln_likelihoods[:,k] += torch.matmul(disp[:,:,1].view(n_frames,1,n_atoms),torch.matmul(precisions_tensor[k],disp[:,:,1].view(n_frames,n_atoms,1)))[:,0,0]
         cluster_frame_ln_likelihoods[:,k] += torch.matmul(disp[:,:,2].view(n_frames,1,n_atoms),torch.matmul(precisions_tensor[k],disp[:,:,2].view(n_frames,n_atoms,1)))[:,0,0]

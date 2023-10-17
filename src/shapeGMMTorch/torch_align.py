@@ -208,7 +208,8 @@ def _torch_pseudo_inv(sigma,device=torch.device("cuda:0")):
     # set first eigenvalue/recirpical to zero
     e[0] = 0.0
     # construct the inverse
-    inv = torch.matmul(v,torch.matmul(torch.diag(e),v.T))
+    #inv = torch.matmul(v,torch.matmul(torch.diag(e),v.T))
+    inv = v @ torch.diag(e) @ v.T
     return inv, lpdet
 
 def _torch_kronecker_log_lik(disp, precision, lpdet):

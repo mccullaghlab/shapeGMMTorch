@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 #make a plot of log likelihood as a function of number of clusters along with the second derivative of that curve
-def plot_log_likelihood_with_dd(axis,cluster_array,train_log_lik,valid_log_lik,fontsize=16,xlabel=True,ylabel1=True,ylabel2=True):
+def plot_log_likelihood_with_dd(axis,cluster_array,train_log_lik,valid_log_lik,fontsize=16,xlabel=True,ylabel1=True,ylabel2=True, legend=True):
     """
     Plot log likelihood as a function of number of clusters for both training and cross validation.  These will be computed as the average over provided training sets.  Also compute and plot the second derivative of the training set data.
     Inputs:
@@ -15,6 +15,7 @@ def plot_log_likelihood_with_dd(axis,cluster_array,train_log_lik,valid_log_lik,f
         xlabel                  (optional)  : boolean defining whether or not to put an xlabel, default is True
         ylabel1                 (optional)  : boolean defining whether or not to put a left ylabel, default is True
         ylabel2                 (optional)  : boolean defining whether or not to put a right ylabel, default is True
+        legend                  (optional)  : boolean defining whether or not to put a legend
     """
     colors = ["tab:blue", "tab:red"]
     # Training Data
@@ -45,5 +46,6 @@ def plot_log_likelihood_with_dd(axis,cluster_array,train_log_lik,valid_log_lik,f
         axis.set_xlabel("Number of Clusters",fontsize=fontsize)
     ax2.tick_params(axis='both',labelsize=fontsize,labelcolor=colors[1])
     axis.tick_params(axis='both',labelsize=fontsize)
-    axis.legend(fontsize=fontsize)
+    if legend==True:
+        axis.legend(fontsize=fontsize)
 

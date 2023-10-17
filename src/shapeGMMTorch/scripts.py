@@ -150,9 +150,9 @@ def kl_divergence(sgmmQ, sgmmP, n_points):
     lnP - lnQ  : (float) KL divergence
     """
     trj = sgmmP.generate(n_points)
-    lnP = sgmmP.predict(trj)[2]
-    lnQ = sgmmQ.predict(trj)[2]
-    return lnP - lnQ
+    lnP = sgmmP.predict(trj)[2]  # LL per frame
+    lnQ = sgmmQ.predict(trj)[2]  # LL per frame
+    return lnP - lnQ 
 
 def _pinv(sigma):
     e, v = np.linalg.eigh(sigma)
