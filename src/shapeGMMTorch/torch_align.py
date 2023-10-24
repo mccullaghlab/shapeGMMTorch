@@ -94,7 +94,7 @@ def _torch_uniform_log_likelihood(disp, n_frames, n_atoms, var_norm, log_lik_pre
     return log_lik, var
 
 # Perform iterative Kabsch alignment to compute aligned trajectory, average and variance
-def torch_iterative_align_uniform(traj_tensor, dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-3, verbose=False):
+def torch_iterative_align_uniform(traj_tensor, dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-3, max_iter=200,verbose=False):
     # meta data
     n_frames = traj_tensor.shape[0]
     n_atoms = traj_tensor.shape[1]
@@ -105,8 +105,9 @@ def torch_iterative_align_uniform(traj_tensor, dtype=torch.float32, device=torch
     log_lik_prefactor = torch.tensor(-1.5*(n_atoms-1),dtype=torch.float64,device=device)
     delta_log_lik = thresh+10
     old_log_lik = 0
+    kabsch_iter = 0
     # loop
-    while (delta_log_lik > thresh):
+    while (delta_log_lik > thresh and kabsch_iter < max_iter):
         # get rotation matrices
         rot_mat = torch_align_rot_mat(traj_tensor, avg)
         # do rotation
@@ -120,6 +121,9 @@ def torch_iterative_align_uniform(traj_tensor, dtype=torch.float32, device=torch
         if verbose==True:
             print(log_lik.cpu().numpy())
         old_log_lik = log_lik
+        kabsch_iter += 1
+    if (kabsch_iter == max_iter):
+        print("Warning: ML alignment not completely converged")
     
     # free up local variables 
     del rot_mat
@@ -129,7 +133,7 @@ def torch_iterative_align_uniform(traj_tensor, dtype=torch.float32, device=torch
     return traj_tensor, avg, var
 
 # Perform iterative uniform Kabsch alignment of trajectory using frame weights
-def torch_iterative_align_uniform_weighted(traj_tensor, weight_tensor, ref_tensor=[], dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-3, verbose=False):
+def torch_iterative_align_uniform_weighted(traj_tensor, weight_tensor, ref_tensor=[], dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-3, max_iter = 200, verbose=False):
     # meta data
     n_frames = traj_tensor.shape[0]
     n_atoms = traj_tensor.shape[1]
@@ -147,7 +151,8 @@ def torch_iterative_align_uniform_weighted(traj_tensor, weight_tensor, ref_tenso
 
     delta_log_lik = thresh+10
     old_log_lik = 0
-    while (delta_log_lik > thresh):
+    kabsch_iter = 0
+    while (delta_log_lik > thresh and kabsch_iter < max_iter):
         # get rotation matrices
         rot_mat = torch_align_rot_mat(traj_tensor, avg)
         # do rotation
@@ -167,6 +172,9 @@ def torch_iterative_align_uniform_weighted(traj_tensor, weight_tensor, ref_tenso
         if verbose==True:
             print(log_lik)
         old_log_lik = log_lik
+        kasbch_iter += 1 
+    if (kabsch_iter == max_iter):
+        print("Warning: ML alignment not completely converged")
 
     # free up local variables 
     del rot_mat
@@ -189,6 +197,13 @@ def torch_align_kronecker(traj_tensor, ref_tensor, precision_tensor, dtype=torch
     torch.cuda.empty_cache()    
     # return aligned trajectory
     return traj_tensor
+
+def _torch_covar(disp,covar_norm):
+    n_frames = disp.shape[0]
+    disp = torch.transpose(disp,0,1).reshape(-1,n_frames*3)
+    covar = disp @ disp.T
+    covar *= covar_norm
+    return covar
 
 # determine the ln(det) of a singular matrix ignoring eigenvalues below threshold
 def _torch_pseudo_lndet(sigma, EigenValueThresh=1e-10):
@@ -225,34 +240,30 @@ def _torch_kronecker_log_lik(disp, precision, lpdet):
     log_lik -= 1.5 * lpdet
     return log_lik
 
-def torch_iterative_align_kronecker(traj_tensor, stride=1024, dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-3, verbose=False):
+def torch_iterative_align_kronecker(traj_tensor, dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-3, max_iter = 200, verbose=False):
     # meta data
     n_frames = traj_tensor.shape[0]
     n_atoms = traj_tensor.shape[1]
     
     # pass constant to device
-    #covar_norm = torch.tensor(1/(3*n_frames-1),dtype=torch.float64,device=device)
-    covar_norm = torch.tensor(1/(n_frames-1),dtype=torch.float64,device=device)
+    covar_norm = torch.tensor(1/(3*n_frames-1),dtype=torch.float64,device=device)
     
     # initialize with average as the first frame (arbitrary choice)
     weighted_avg = traj_tensor[0]
     
     delta_log_lik = thresh+10
     old_log_lik = 0
-    while (delta_log_lik > thresh):
+    kabsch_iter = 0
+    while (delta_log_lik > thresh and kabsch_iter < max_iter):
         # get rotation matrices
         rot_mat = torch_align_rot_mat(traj_tensor, weighted_avg)
         # do rotation
         traj_tensor = torch.matmul(traj_tensor,rot_mat)
         # compute new average
         avg = torch.mean(traj_tensor,0,False)
-        # compute covar using strided data
-        covar = torch.zeros((n_atoms,n_atoms),dtype=torch.float64,device=device)
         disp = (traj_tensor - avg).to(torch.float64)
-        for frame in range(0,n_frames,stride):
-            upper_limit = min(frame+stride,n_frames)
-            covar += torch.sum(torch.matmul(disp[frame:upper_limit],torch.transpose(disp[frame:upper_limit],1,2)),0)
-        covar *= covar_norm
+        # compute covar 
+        covar = _torch_covar(disp,covar_norm)
         # log likelihood
         precision, lpdet =  _torch_pseudo_inv(covar,device=device)
         #log_lik = _torch_kronecker_log_lik(disp, precision, lpdet)
@@ -262,6 +273,9 @@ def torch_iterative_align_kronecker(traj_tensor, stride=1024, dtype=torch.float3
             print(log_lik.cpu().numpy())
         old_log_lik = log_lik
         weighted_avg = torch.matmul(precision,avg.to(torch.float64)).to(dtype)
+        kabsch_iter += 1
+    if (kabsch_iter == max_iter):
+        print("Warning: ML alignment not completely converged")
     # free up local variables 
     del rot_mat
     del covar
@@ -288,12 +302,13 @@ def _torch_kronecker_weighted_log_lik(disp, weight_tensor, precision, lpdet):
     log_lik -= 1.5 * lpdet
     return log_lik
 
-def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_tensor=[], ref_precision_tensor=[], stride=1024, dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-3, verbose=False):
+def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_tensor=[], ref_precision_tensor=[], dtype=torch.float32, device=torch.device("cuda:0"), thresh=1e-3, max_iter = 200, verbose=False):
     # meta data
     n_frames = traj_tensor.shape[0]
     n_atoms = traj_tensor.shape[1]
     # ensure weights are normalized
     weight_tensor /= torch.sum(weight_tensor)
+    sqrt_weight_tensor = torch.sqrt(weight_tensor)
     # set ref
     if ref_tensor == []:
         # initialize with average as the first frame (arbitrary choice)
@@ -301,25 +316,21 @@ def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_ten
     else:
         weighted_avg = torch.matmul(ref_precision_tensor, ref_tensor.to(torch.float64)).to(dtype)
     # pass normalization value to device
-    #covar_norm = torch.tensor(1/3,dtype=torch.float64,device=device)
-    covar_norm = torch.tensor(1.0,dtype=torch.float64,device=device)
+    covar_norm = torch.tensor(1/3,dtype=torch.float64,device=device)
     
     delta_log_lik = thresh+10
     old_log_lik = 0
-    while (delta_log_lik > thresh):
+    kabsch_iter = 0
+    while (delta_log_lik > thresh and kabsch_iter < max_iter):
         # get rotation matrices
         rot_mat = torch_align_rot_mat(traj_tensor, weighted_avg)
         # do rotation
         traj_tensor = torch.matmul(traj_tensor,rot_mat)
         # compute new average
         avg = torch.sum((traj_tensor*weight_tensor.view(-1,1,1)),0,False)
-        # compute covar using strided data
-        covar = torch.zeros((n_atoms,n_atoms),dtype=torch.float64,device=device)
         disp = (traj_tensor - avg).to(torch.float64)
-        for frame in range(0,n_frames,stride):
-            upper_limit = min(frame+stride,n_frames)
-            covar += torch.sum(torch.matmul(disp[frame:upper_limit],torch.transpose(disp[frame:upper_limit],1,2))*weight_tensor[frame:upper_limit].view(-1,1,1),0)
-        covar *= covar_norm
+        # compute covar 
+        covar = _torch_covar(disp*sqrt_weight_tensor.view(-1,1,1),covar_norm)
         # log likelihood
         precision, lpdet =  _torch_pseudo_inv(covar,device=device)
         #log_lik = _torch_kronecker_weighted_log_lik(disp, weight_tensor, precision, lpdet)
@@ -329,6 +340,9 @@ def torch_iterative_align_kronecker_weighted(traj_tensor, weight_tensor, ref_ten
             print(log_lik.cpu().numpy())
         old_log_lik = log_lik
         weighted_avg = torch.matmul(precision, avg.to(torch.float64)).to(dtype)     
+        kabsch_iter += 1
+    if (kabsch_iter == max_iter):
+        print("Warning: ML alignment not completely converged")
     # free up local variables 
     del rot_mat
     del covar

@@ -4,9 +4,6 @@ import warnings
 warnings.filterwarnings('ignore')
 import random
 # the following are local libraries
-#import torch_align
-#import torch_uniform_sgmm_lib
-#import torch_kronecker_sgmm_lib
 from . import torch_align
 from . import torch_uniform_sgmm_lib                            
 from . import torch_kronecker_sgmm_lib  
@@ -102,7 +99,10 @@ class ShapeGMMTorch:
             if self.covar_type == 'uniform':
                 centers_tensor[k], vars_tensor[k] = torch_align.torch_iterative_align_uniform_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,device=self.device,dtype=self.dtype)[1:]
             else:
-                centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,device=self.device,dtype=self.dtype)[1:]        
+                if (self.verbose==True):
+                    centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,device=self.device,dtype=self.dtype,verbose=True)[1:]
+                else:
+                    centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,device=self.device,dtype=self.dtype)[1:]        
         if (self.verbose == True):
             print("Weights from initial clusters in fit:", self.weights)
     
@@ -298,7 +298,7 @@ class ShapeGMMTorch:
     def _align_clusters_uniform(self, traj_tensor, centers_tensor):
         if self._gmm_fit_flag == True:
             # determine a global average 
-            global_center_tensor, global_var_tensor = torch_align.torch_iterative_align_uniform(traj_tensor, dtype=self.dtype, device=self.device)[1:]
+            global_center_tensor, global_var_tensor = torch_align.torch_iterative_align_uniform(traj_tensor, dtype=self.dtype, device=self.device, thresh=self.kabsch_thresh)[1:]
             # align centers to global average
             centers_tensor = torch_align.torch_align_uniform(centers_tensor, global_center_tensor)
             # align each cluster to its average
@@ -312,7 +312,7 @@ class ShapeGMMTorch:
     def _align_clusters_kronecker(self, traj_tensor, centers_tensor, precisions_tensor):
         if self._gmm_fit_flag == True:
             # determine a global average 
-            global_center_tensor, global_precision_tensor = torch_align.torch_iterative_align_kronecker(traj_tensor, dtype=self.dtype, device=self.device)[1:3]
+            global_center_tensor, global_precision_tensor = torch_align.torch_iterative_align_kronecker(traj_tensor, dtype=self.dtype, device=self.device, thresh=self.kabsch_thresh)[1:3]
             # align centers to global average (NxN covars/precisions are rotationally invariant so don't need to rotate them)
             centers_tensor = torch_align.torch_align_kronecker(centers_tensor, global_center_tensor, global_precision_tensor, dtype=self.dtype, device=self.device)
             # align each cluster to its average
