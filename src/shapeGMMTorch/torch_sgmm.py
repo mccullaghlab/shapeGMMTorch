@@ -100,9 +100,9 @@ class ShapeGMMTorch:
                 centers_tensor[k], vars_tensor[k] = torch_align.torch_iterative_align_uniform_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,device=self.device,dtype=self.dtype)[1:]
             else:
                 if (self.verbose==True):
-                    centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,device=self.device,dtype=self.dtype,verbose=True)[1:]
+                    centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,max_iter=self.kabsch_max_steps,device=self.device,dtype=self.dtype,verbose=True)[1:]
                 else:
-                    centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,device=self.device,dtype=self.dtype)[1:]        
+                    centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,max_iter=self.kabsch_max_steps, device=self.device,dtype=self.dtype)[1:]        
         if (self.verbose == True):
             print("Weights from initial clusters in fit:", self.weights)
     
@@ -117,7 +117,7 @@ class ShapeGMMTorch:
             if self.covar_type == 'uniform':
                 centers_tensor, vars_tensor, ln_weights_tensor, log_likelihood = torch_uniform_sgmm_lib.torch_sgmm_uniform_em(traj_tensor, frame_weights_tensor, centers_tensor, vars_tensor, ln_weights_tensor, thresh=self.kabsch_thresh, dtype=self.dtype, device=self.device)
             else:
-                centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, log_likelihood = torch_kronecker_sgmm_lib.torch_sgmm_kronecker_em(traj_tensor, frame_weights_tensor, centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, thresh=self.kabsch_thresh, dtype=self.dtype, device=self.device)
+                centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, log_likelihood = torch_kronecker_sgmm_lib.torch_sgmm_kronecker_em(traj_tensor, frame_weights_tensor, centers_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor, thresh=self.kabsch_thresh, max_iter=self.kabsch_max_steps, dtype=self.dtype, device=self.device)
             if (self.verbose == True):
                 print(step+1, np.round(torch.exp(ln_weights_tensor).cpu().numpy(),3), np.round(log_likelihood.cpu().numpy(),3))
             # compute convergence criteria
@@ -312,7 +312,7 @@ class ShapeGMMTorch:
     def _align_clusters_kronecker(self, traj_tensor, centers_tensor, precisions_tensor):
         if self._gmm_fit_flag == True:
             # determine a global average 
-            global_center_tensor, global_precision_tensor = torch_align.torch_iterative_align_kronecker(traj_tensor, dtype=self.dtype, device=self.device, thresh=self.kabsch_thresh)[1:3]
+            global_center_tensor, global_precision_tensor = torch_align.torch_iterative_align_kronecker(traj_tensor, dtype=self.dtype, device=self.device, thresh=self.kabsch_thresh, max_iter=self.kabsch_max_steps)[1:3]
             # align centers to global average (NxN covars/precisions are rotationally invariant so don't need to rotate them)
             centers_tensor = torch_align.torch_align_kronecker(centers_tensor, global_center_tensor, global_precision_tensor, dtype=self.dtype, device=self.device)
             # align each cluster to its average

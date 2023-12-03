@@ -139,7 +139,7 @@ def maha_dist2(x1, x2, weights):
 
 def kl_divergence(sgmmQ, sgmmP, n_points):
     """
-    Compute the Kullback-Leibler divergences from sgmmQ (Q) to sgmmP (P) by sampling from sgmm2
+    Compute the Kullback-Leibler divergence from sgmmQ (Q) to sgmmP (P) by sampling from sgmmP
     with n_points
 
     sgmmQ      : reference shapeGMM object
@@ -153,6 +153,38 @@ def kl_divergence(sgmmQ, sgmmP, n_points):
     lnP = sgmmP.predict(trj)[2]  # LL per frame
     lnQ = sgmmQ.predict(trj)[2]  # LL per frame
     return lnP - lnQ 
+
+def js_divergence(sgmmQ, sgmmP, n_points):
+    """
+    Compute the Jensen-Shannon divergence from sgmmQ (Q) to sgmmP (P) sampling using
+    with n_points
+
+    sgmmQ      : reference shapeGMM object
+    sgmmP      : target shapeGMM object
+    n_points   : (integer) number of frames to generate to estimate KL divergence
+
+    returns:
+    js         : (float) JS divergence
+    """
+    # create new M object that is 0.5(Q+P)
+    sgmmM = torch_sgmm.shapeGMMTorch(sgmmP.n_clusters+sgmmQ.n_clusters,covar_type="kronecker",device=torch.device("cpu"))
+    sgmmM.weights = 0.5*np.append((sgmmQ.weights,sgmmP.weights))
+    sgmmM.centers = np.concatenate((sgmmQ.centers,sgmmP.centers))
+    sgmmM.precisions = np.concatenate((sgmmQ.precisions,sgmmP.precisions))
+    sgmm._gmm_fit_flag = True
+    # now measure two Kullback Leibler from M to P (or D(P|M))
+    kl_P_M = kl_divergence(sgmmP,sgmmM)
+    #trj = sgmmP.generate(n_points)
+    #lnP = sgmmP.predict(trj)[2]  # LL per frame for P
+    #lnM = sgmmM.predict(trj)[2]  # LL per frame for M
+    #kl_P_M = lnP - lnM
+    # now measure two Kullback Leibler from M to Q (or D(Q|M))
+    kl_Q_M = kl_divergence(sgmmQ,sgmmM)
+    #trj = sgmmQ.generate(n_points)
+    #lnQ = sgmmQ.predict(trj)[2]  # LL per frame for Q
+    #lnM = sgmmM.predict(trj)[2]  # LL per frame for M
+    #kl_Q_M = lnQ - lnM
+    return 0.5*(kl_P_M + kl_Q_M)
 
 def _pinv(sigma):
     e, v = np.linalg.eigh(sigma)
