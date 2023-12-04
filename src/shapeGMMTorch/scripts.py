@@ -167,23 +167,17 @@ def js_divergence(sgmmQ, sgmmP, n_points):
     js         : (float) JS divergence
     """
     # create new M object that is 0.5(Q+P)
-    sgmmM = torch_sgmm.shapeGMMTorch(sgmmP.n_clusters+sgmmQ.n_clusters,covar_type="kronecker",device=torch.device("cpu"))
+    sgmmM = torch_sgmm.ShapeGMMTorch(sgmmP.n_clusters+sgmmQ.n_clusters,covar_type="kronecker",device=torch.device("cpu"))
     sgmmM.weights = 0.5*np.append((sgmmQ.weights,sgmmP.weights))
     sgmmM.centers = np.concatenate((sgmmQ.centers,sgmmP.centers))
     sgmmM.precisions = np.concatenate((sgmmQ.precisions,sgmmP.precisions))
-    sgmm._gmm_fit_flag = True
+    sgmmM.lpdets = np.concatenate((sgmmQ.lpdets,sgmmP.lpdets))
+    sgmmM.n_atoms = sgmmP.n_atoms
+    sgmmM._gmm_fit_flag = True
     # now measure two Kullback Leibler from M to P (or D(P|M))
     kl_P_M = kl_divergence(sgmmP,sgmmM)
-    #trj = sgmmP.generate(n_points)
-    #lnP = sgmmP.predict(trj)[2]  # LL per frame for P
-    #lnM = sgmmM.predict(trj)[2]  # LL per frame for M
-    #kl_P_M = lnP - lnM
     # now measure two Kullback Leibler from M to Q (or D(Q|M))
     kl_Q_M = kl_divergence(sgmmQ,sgmmM)
-    #trj = sgmmQ.generate(n_points)
-    #lnQ = sgmmQ.predict(trj)[2]  # LL per frame for Q
-    #lnM = sgmmM.predict(trj)[2]  # LL per frame for M
-    #kl_Q_M = lnQ - lnM
     return 0.5*(kl_P_M + kl_Q_M)
 
 def _pinv(sigma):
