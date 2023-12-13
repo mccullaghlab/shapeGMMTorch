@@ -10,9 +10,25 @@ def cluster_ids_from_rand(random_nums,weights):
         running_sum += weight
     return cluster_ids
 
-def gen_mv(cluster_mean, cluster_covariance, n_samples=10000):
-    rv = multivariate_normal(mean=cluster_mean.flatten(), cov=cluster_covariance, allow_singular=True)
-    trj = rv.rvs(size=n_samples).reshape(n_samples, -1, 3)
+def gen_mv(mean, prec, n_samples=10000):
+    # meta data
+    n_atoms = mean.shape[0]
+    e, v = np.linalg.eigh(prec)
+    # compute stdev of each mode
+    stdev = np.sqrt(1/e)
+    # force first to be zero
+    stdev[0] = 0.0
+    # generate normally distributed random variables (mean 0, stdev 1)
+    norms = np.random.normal(size=(n_atoms,n_samples*3))
+    # multiply by normal mode stdev
+    norms *= stdev.reshape((-1,1))
+    # rotate back into original basis
+    trj = np.dot(v,norms)
+    # reshape trajectory to be (n_samples, n_atoms, 3)
+    trj = trj.reshape(n_atoms,n_samples,3)
+    trj = np.transpose(trj,(1,0,2))
+    # add mean
+    trj += mean
     return trj
 
 def cov_from_prec(prec):
@@ -27,5 +43,5 @@ def generate(sgmm,n_frames):
     trj = np.empty((n_frames,sgmm.n_atoms,3))
     for cluster_id in range(sgmm.n_clusters):
         indeces = np.argwhere(cluster_ids == cluster_id).flatten()
-        trj[indeces] = gen_mv(sgmm.centers[cluster_id],cov_from_prec(sgmm.precisions[cluster_id]),indeces.size)
+        trj[indeces] = gen_mv(sgmm.centers[cluster_id],sgmm.precisions[cluster_id],indeces.size)
     return trj

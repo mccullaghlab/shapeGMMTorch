@@ -259,7 +259,7 @@ class ShapeGMMTorch:
             trj = np.empty((n_frames,self.n_atoms,3))
             for cluster_id in range(self.n_clusters):
                 indeces = np.argwhere(cluster_ids == cluster_id).flatten()
-                trj[indeces] = generate_points.gen_mv(self.centers[cluster_id],generate_points.cov_from_prec(self.precisions[cluster_id]),indeces.size)
+                trj[indeces] = generate_points.gen_mv(self.centers[cluster_id],self.precisions[cluster_id],indeces.size)
             return trj
         else:
             print("shapeGMM must be fit before it can generate.")
