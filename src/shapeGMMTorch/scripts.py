@@ -139,7 +139,7 @@ def write_cluster_trajectories(sgmm, n_frames_per_cluster=100):
         pdb_file_name = "cluster" + str(cluster_id+1) + "_mean.pdb"
         dcd_file_name = "cluster" + str(cluster_id+1) + "_" + str(n_frames_per_clusters) + "frames.dcd"
         # write pdb of mean structure
-        sel_all.positions = sgmm_enm_gt.centers[cluster_id]
+        sel_all.positions = sgmm.centers[cluster_id]
         sel_all.write(pdb_file_name)
         # write dcd of generated trajectory
         with md.Writer(dcd_file_name, sel_all.n_atoms) as W:
