@@ -2,8 +2,10 @@ import numpy as np
 import time
 import sys
 import torch
+import MDAnalysis as md
 from scipy import stats
 from . import torch_sgmm
+from . import generate_points
 
 def cross_validate_cluster_scan(traj_data, n_train_frames, frame_weights = [], covar_type="kronecker", cluster_array = np.arange(2,9,1).astype(int), n_training_sets=10, n_attempts = 5, dtype=torch.float32, device=torch.device("cuda:0")):
     """
@@ -121,3 +123,27 @@ def sgmm_fit_with_attempts(train_data, n_clusters, n_attempts, frame_weights = [
     # return obj with max log likelihood per frame
     return objs[np.nanargmax(log_likes)]
 
+# write cluster trajectories
+def write_cluster_trajectories(sgmm, n_frames_per_cluster=100):
+    """
+    Write generated trajectories for each cluster in shapeGMM object sgmm
+    """
+    # create MDAnalysis universe
+    u = md.Universe.empty(sgmm.n_atoms, 1, atom_resindex=np.zeros(sgmm.n_atoms), trajectory=True)
+    u.trajectory.n_frames = n_frames_per_cluster
+    sel_all = u.select_atoms("all")
+    # loop through clusters
+    for cluster_id in range(sgmm.n_clusters):
+
+        trj = generate_points.gen_mv(sgmm.centers[cluster_id],sgmm.precisions[cluster_id],n_frames_per_cluster)
+        pdb_file_name = "cluster" + str(cluster_id+1) + "_mean.pdb"
+        dcd_file_name = "cluster" + str(cluster_id+1) + "_" + str(n_frames_per_clusters) + "frames.dcd"
+        # write pdb of mean structure
+        sel_all.positions = sgmm_enm_gt.centers[cluster_id]
+        sel_all.write(pdb_file_name)
+        # write dcd of generated trajectory
+        with md.Writer(dcd_file_name, sel_all.n_atoms) as W:
+            for ts in range(n_frames_per_cluster):
+                sel_all.positions = trj[ts]
+                W.write(sel_all)
+        W.close()
