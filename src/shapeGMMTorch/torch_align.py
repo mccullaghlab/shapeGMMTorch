@@ -172,7 +172,7 @@ def torch_iterative_align_uniform_weighted(traj_tensor, weight_tensor, ref_tenso
         if verbose==True:
             print(log_lik)
         old_log_lik = log_lik
-        kasbch_iter += 1 
+        kabsch_iter += 1 
     if (kabsch_iter == max_iter):
         print("Warning: ML alignment not completely converged")
 
