@@ -137,7 +137,7 @@ def write_cluster_trajectories(sgmm, n_frames_per_cluster=100):
 
         trj = generate_points.gen_mv(sgmm.centers[cluster_id],sgmm.precisions[cluster_id],n_frames_per_cluster)
         pdb_file_name = "cluster" + str(cluster_id+1) + "_mean.pdb"
-        dcd_file_name = "cluster" + str(cluster_id+1) + "_" + str(n_frames_per_clusters) + "frames.dcd"
+        dcd_file_name = "cluster" + str(cluster_id+1) + "_" + str(n_frames_per_cluster) + "frames.dcd"
         # write pdb of mean structure
         sel_all.positions = sgmm.centers[cluster_id]
         sel_all.write(pdb_file_name)
@@ -147,3 +147,64 @@ def write_cluster_trajectories(sgmm, n_frames_per_cluster=100):
                 sel_all.positions = trj[ts]
                 W.write(sel_all)
         W.close()
+
+# write cluster trajectories
+def write_cluster_trajectories(traj_data, cluster_ids):
+    """
+    Write trajectories for each cluster from trajectory data and cluster ids
+    """
+    # get meta data from inputs
+    n_frames = traj_data.shape[0]
+    n_atoms = traj_data.shape[1]
+    n_cluster_frames = np.unique(cluster_ids,return_counts=True)[1]
+    n_clusters = n_cluster_frames.size
+    # loop through clusters
+    for cluster_id in range(n_clusters):
+        # create MDAnalysis universe
+        u = md.Universe.empty(n_atoms, 1, atom_resindex=np.zeros(n_atoms), trajectory=True)
+        u.trajectory.n_frames = n_cluster_frames[cluster_id]
+        sel_all = u.select_atoms("all")
+        trj = traj_data[cluster_ids==cluster_id]
+        pdb_file_name = "cluster" + str(cluster_id+1) + "_frame1.pdb"
+        dcd_file_name = "cluster" + str(cluster_id+1) + "_" + str(n_cluster_frames[cluster_id]) + "frames.dcd"
+        # write pdb of mean structure
+        sel_all.positions = trj[0]
+        sel_all.write(pdb_file_name)
+        # write dcd of generated trajectory
+        with md.Writer(dcd_file_name, sel_all.n_atoms) as W:
+            for ts in range(n_cluster_frames[cluster_id]):
+                sel_all.positions = trj[ts]
+                W.write(sel_all)
+        W.close()
+
+# write representative frames
+def write_representative_frames(sgmm, traj_data, cluster_ids):
+    """
+    Write representative frames for each cluster
+    This is defined as the frame with the largest LL to each cluster
+    """
+    # get meta data from inputs
+    n_frames = traj_data.shape[0]
+    n_atoms = sgmm.n_atoms
+    n_clusters = sgmm.n_clusters
+    # loop through clusters
+    for cluster_id in range(n_clusters):
+        # create a shapeGMM object with just this cluster
+        sgmmM = torch_sgmm.ShapeGMMTorch(1,covar_type=sgmm.covar_type,device=torch.device("cpu"),dtype=sgmm.dtype)
+        sgmmM.weights = np.array([1.0])
+        sgmmM.centers = sgmm.centers[cluster_id].reshape(1,n_atoms,3)
+        sgmmM.precisions = sgmm.precisions[cluster_id].reshape(1,n_atoms,n_atoms)
+        sgmmM.lpdets = np.array([sgmm.lpdets[cluster_id]])
+        sgmmM.n_atoms = sgmm.n_atoms
+        sgmmM._gmm_fit_flag = True
+        # compute LL using the predict function
+        indeces = np.argwhere(cluster_ids==cluster_id).flatten()
+        sgmmM.predict(traj_data[indeces])
+        representive_frame_id = indeces[np.argmax(sgmmM.predict_frame_log_likelihood)]
+        # create MDAnalysis universe to print frame
+        u = md.Universe.empty(n_atoms, 1, atom_resindex=np.zeros(n_atoms), trajectory=True)
+        sel_all = u.select_atoms("all")
+        # print pdb
+        pdb_file_name = "cluster" + str(cluster_id+1) + "_reperesentative_frame_" + str(representive_frame_id+1) + ".pdb"
+        sel_all.positions = traj_data[representive_frame_id]
+        sel_all.write(pdb_file_name)
