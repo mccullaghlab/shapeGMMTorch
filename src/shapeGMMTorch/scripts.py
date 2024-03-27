@@ -5,6 +5,7 @@ import torch
 import MDAnalysis as md
 from scipy import stats
 from . import torch_sgmm
+from . import torch_align
 from . import generate_points
 
 def cross_validate_cluster_scan(traj_data, n_train_frames, frame_weights = [], covar_type="kronecker", cluster_array = np.arange(2,9,1).astype(int), n_training_sets=10, n_attempts = 5, dtype=torch.float32, device=torch.device("cuda:0")):
@@ -124,7 +125,7 @@ def sgmm_fit_with_attempts(train_data, n_clusters, n_attempts, frame_weights = [
     return objs[np.nanargmax(log_likes)]
 
 # write cluster trajectories
-def write_cluster_trajectories(sgmm, n_frames_per_cluster=100):
+def generate_cluster_trajectories(sgmm, n_frames_per_cluster=100):
     """
     Write generated trajectories for each cluster in shapeGMM object sgmm
     """
@@ -148,8 +149,8 @@ def write_cluster_trajectories(sgmm, n_frames_per_cluster=100):
                 W.write(sel_all)
         W.close()
 
-# write cluster trajectories
-def write_cluster_trajectories(traj_data, cluster_ids):
+# write aligned cluster trajectories
+def write_aligned_cluster_trajectories(traj_data, cluster_ids, covar_type='kronecker',dtype=torch.float64,device=torch.device("cpu")):
     """
     Write trajectories for each cluster from trajectory data and cluster ids
     """
@@ -164,7 +165,12 @@ def write_cluster_trajectories(traj_data, cluster_ids):
         u = md.Universe.empty(n_atoms, 1, atom_resindex=np.zeros(n_atoms), trajectory=True)
         u.trajectory.n_frames = n_cluster_frames[cluster_id]
         sel_all = u.select_atoms("all")
-        trj = traj_data[cluster_ids==cluster_id]
+        # align cluster trajectory
+        trj_tensor = torch.tensor(traj_data[cluster_ids==cluster_id],dtype=dtype,device=device)
+        torch_align.torch_remove_center_of_geometry(trj_tensor,dtype=dtype,device=device)
+        aligned_traj_tensor = torch_align.torch_iterative_align_kronecker(trj_tensor,dtype=dtype,device=device)[0]
+        trj = aligned_traj_tensor.cpu().numpy()
+        # create file names
         pdb_file_name = "cluster" + str(cluster_id+1) + "_frame1.pdb"
         dcd_file_name = "cluster" + str(cluster_id+1) + "_" + str(n_cluster_frames[cluster_id]) + "frames.dcd"
         # write pdb of mean structure

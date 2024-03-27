@@ -74,13 +74,13 @@ def configurational_entropy(sgmmP, n_points):
     n_points   : (integer) number of frames to generate to sample
 
     returns:
-    lnP        : (float) configurational entropy
+    -lnP       : (float) configurational entropy
     sterr(lnP) : (float) standard error of sampled configurational entropy
     """
     # sample the object and compute probabilities of each sampled point
     trj = sgmmP.generate(n_points)
     lnP = sgmmP.predict(trj)[2]
-    return lnP, stats.sem(sgmmP.predict_frame_log_likelihood)
+    return -lnP, stats.sem(sgmmP.predict_frame_log_likelihood)
 
 def _pinv(sigma):
     e, v = np.linalg.eigh(sigma)
