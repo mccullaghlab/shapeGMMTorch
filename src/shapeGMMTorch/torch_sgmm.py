@@ -99,10 +99,7 @@ class ShapeGMMTorch:
             if self.covar_type == 'uniform':
                 centers_tensor[k], vars_tensor[k] = torch_align.torch_iterative_align_uniform_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,device=self.device,dtype=self.dtype)[1:]
             else:
-                if (self.verbose==True):
-                    centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,max_iter=self.kabsch_max_steps,device=self.device,dtype=self.dtype,verbose=True)[1:]
-                else:
-                    centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,max_iter=self.kabsch_max_steps, device=self.device,dtype=self.dtype)[1:]        
+                centers_tensor[k], precisions_tensor[k], lpdets_tensor[k] = torch_align.torch_iterative_align_kronecker_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,max_iter=self.kabsch_max_steps, device=self.device,dtype=self.dtype)[1:]        
         if (self.verbose == True):
             print("Weights from initial clusters in fit:", self.weights)
     
@@ -163,7 +160,7 @@ class ShapeGMMTorch:
         if self.sort == True:
             self._sort_object()
         # return aligned trajectory
-        return traj_data
+        #return traj_data
 
     # predict clustering of provided data based on prefit parameters from fit_weighted
     def predict(self,traj_data, frame_weights = []):
@@ -227,8 +224,6 @@ class ShapeGMMTorch:
                     traj_tensor[indeces] = torch_align.torch_align_uniform(traj_tensor[indeces], centers_tensor[k])
                 else:
                     traj_tensor[indeces] = torch_align.torch_align_kronecker(traj_tensor[indeces], centers_tensor[k], precisions_tensor[k], dtype=self.dtype, device=self.device)
-            # return traj_data to cpu
-            traj_data = traj_tensor.cpu().numpy()
             # delete data from gpu
             del traj_tensor
             del ln_weights_tensor
@@ -240,7 +235,7 @@ class ShapeGMMTorch:
                 del lpdets_tensor 
             torch.cuda.empty_cache()
             # return values
-            return clusters, traj_data, log_likelihood
+            return clusters
         else:
             print("shapeGMM must be fit before it can predict.")
 
@@ -255,11 +250,22 @@ class ShapeGMMTorch:
         """
 
         if self._gmm_fit_flag == True:
+            # generate random cluster ids based on frame weights - not could adapt this to account for transition matrix
             cluster_ids = generate_points.cluster_ids_from_rand(np.random.rand(n_frames),self.weights)
             trj = np.empty((n_frames,self.n_atoms,3))
             for cluster_id in range(self.n_clusters):
+                if self.covar_type == "kronecker":
+                    precision = self.precisions[cluster_id]
+                else:
+                    precision = 1/self.vars[cluster_id] * np.identity(self.n_atoms)
+                    # now enforece that constant vector is in null space of precision
+                    wsum = -1/self.vars[cluster_id]/(self.n_atoms-1)
+                    for i in range(self.n_atoms):
+                        for j in range(self.n_atoms):
+                            if i != j:
+                                precision[i,j] = wsum
                 indeces = np.argwhere(cluster_ids == cluster_id).flatten()
-                trj[indeces] = generate_points.gen_mv(self.centers[cluster_id],self.precisions[cluster_id],indeces.size)
+                trj[indeces] = generate_points.gen_mv(self.centers[cluster_id],precision,indeces.size)
             return trj
         else:
             print("shapeGMM must be fit before it can generate.")
