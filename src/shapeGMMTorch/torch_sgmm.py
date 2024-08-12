@@ -235,7 +235,7 @@ class ShapeGMMTorch:
                 del lpdets_tensor 
             torch.cuda.empty_cache()
             # return values
-            return clusters
+            return clusters, log_likelihood
         else:
             print("shapeGMM must be fit before it can predict.")
 

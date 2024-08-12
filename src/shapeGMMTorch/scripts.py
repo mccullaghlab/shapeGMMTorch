@@ -8,13 +8,15 @@ from . import torch_sgmm
 from . import torch_align
 from . import generate_points
 
-def cross_validate_cluster_scan(traj_data, n_train_frames, frame_weights = [], covar_type="kronecker", cluster_array = np.arange(2,9,1).astype(int), n_training_sets=10, n_attempts = 5, dtype=torch.float32, device=torch.device("cuda:0")):
+def cross_validate_cluster_scan(traj_data, n_train_frames, frame_weights = [], thresh=1e-3, kabsch_thresh=1e-1, covar_type="kronecker", cluster_array = np.arange(2,9,1).astype(int), n_training_sets=10, n_attempts = 5, dtype=torch.float32, device=torch.device("cuda:0")):
     """
     perform cross validation weighted shape-GMM for range of cluster sizes. Return train and CV log likelihoods as a function of number of clusters for each training set.
     Inputs:
         traj_data                    (required)  : float64 array with dimensions (n_frames, n_atoms,3) of molecular configurations
         n_train_frames               (required)  : int     scalar dictating number of frames to use as training (rest is used for CV)
         frame_weights               (default []) : float   array defining frame weights.  Default is empty/uniform
+        thresh                    (default 1e-3) : float  defining the threshold for log likelihood convergence.  Default is 1e-3
+        kabsch_thresh             (default 1e-1) : float  defining the threshold for alignment convergence.  Default is 1e-1
         covar_type         (default "kronecker") : string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'uniform'.
         cluster_array         (default: [2..8])  : int     array of cluster sizes - can be of any number but must be ints. Default is [2, 3, 4, 5, 6, 7, 8]
         n_training_sets           (default: 10)  : int     scalar dictating how many training sets to choose. Default is 10
@@ -32,8 +34,8 @@ def cross_validate_cluster_scan(traj_data, n_train_frames, frame_weights = [], c
     print("Number of frames to train each model:", n_train_frames)
     print("Number of frames to predict each model:", n_predict_frames)
     print("Number of training sets:", n_training_sets)
-    print("Number of clusters:", cluster_array.size)
     print("Number of attempts per set/cluster:", n_attempts)
+    print("Cluster array:", cluster_array)
     sys.stdout.flush()
     # open data files
     weighted_train_log_lik = np.empty((cluster_array.size,n_training_sets),dtype=np.float64)
@@ -67,12 +69,12 @@ def cross_validate_cluster_scan(traj_data, n_train_frames, frame_weights = [], c
                 current_attempts = n_attempts
             for attempt in range(current_attempts):
                 start_time = time.process_time()
-                wsgmm = torch_sgmm.ShapeGMMTorch(cluster_size, covar_type=covar_type, dtype=dtype, device=device)
+                wsgmm = torch_sgmm.ShapeGMMTorch(cluster_size, log_thresh=thresh, kabsch_thresh=kabsch_thresh, covar_type=covar_type, dtype=dtype, device=device)
                 wsgmm.fit(train_data, frame_weights=train_frame_weights)
                 w_log_lik.append(wsgmm.log_likelihood)
                 w_objs.append(wsgmm)
                 elapsed_time = time.process_time()-start_time
-                print("%15d %15d %15d %19.3f %15.3f" % (training_set+1, cluster_size, attempt+1, np.round(wsgmm.log_likelihood,3), np.round(elapsed_time,3)))
+                print("%15d %15d %15d %19.4f %15.3f" % (training_set+1, cluster_size, attempt+1, np.round(wsgmm.log_likelihood,4), np.round(elapsed_time,3)))
                 sys.stdout.flush()
             # determine maximum
             w_arg = np.nanargmax(w_log_lik)
@@ -84,7 +86,7 @@ def cross_validate_cluster_scan(traj_data, n_train_frames, frame_weights = [], c
     #return
     return weighted_train_log_lik, weighted_predict_log_lik
 
-def sgmm_fit_with_attempts(train_data, n_clusters, n_attempts, frame_weights = [], covar_type='kronecker', dtype=torch.float32, device=torch.device("cuda:0")):
+def sgmm_fit_with_attempts(train_data, n_clusters, n_attempts, frame_weights = [], thresh=1e-3, kabsch_thresh=1e-1, covar_type='kronecker', dtype=torch.float32, device=torch.device("cuda:0")):
     """
     Initialize and fit shapeGMM object with training data but do so a number of times and return the max log likelihood object
 
@@ -93,6 +95,8 @@ def sgmm_fit_with_attempts(train_data, n_clusters, n_attempts, frame_weights = [
         n_clusters (required)   - integer number of clusters must be input
         n_attempts (required)   - integer dictating the number of random intializations to attempt
         frame_weights (optional)- (n_train_frames) float array containing relative frame weights.  Defaults to empty (uniform weights)
+        thresh   (default 1e-3) - float  defining the threshold for log likelihood convergence.  Default is 1e-3
+        kabsch_thresh (default 1e-1) - float  defining the threshold alignment convergence.  Default is 1e-1
         covar_type              - string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'kronecker'.
         dtype                   - Data type to be used.  Default is torch.float32.
         device                  - device to be used.  Default is torch.device('cuda:0') device.
@@ -115,10 +119,10 @@ def sgmm_fit_with_attempts(train_data, n_clusters, n_attempts, frame_weights = [
     #
     for i in range(n_attempts):
         start_time = time.process_time()
-        wsgmm = torch_sgmm.ShapeGMMTorch(n_clusters,covar_type=covar_type, dtype=dtype, device=device)
+        wsgmm = torch_sgmm.ShapeGMMTorch(n_clusters,log_thresh=thresh, covar_type=covar_type, dtype=dtype, device=device)
         wsgmm.fit(train_data, frame_weights = frame_weights)
         elapsed_time = time.process_time()-start_time
-        print("%8d %19.3f %15.3f" % (i+1, np.round(wsgmm.log_likelihood,3), np.round(elapsed_time,3)))
+        print("%8d %19.4f %15.3f" % (i+1, np.round(wsgmm.log_likelihood,4), np.round(elapsed_time,3)))
         objs.append(wsgmm)
         log_likes.append(wsgmm.log_likelihood)
     # return obj with max log likelihood per frame
