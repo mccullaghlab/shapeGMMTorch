@@ -1,4 +1,6 @@
 from .io import (
+    cross_validate_component_scan, 
+    sgmm_fit_with_attempts,
     write_aligned_cluster_trajectories,
     write_representative_frames,
     generate_cluster_trajectories
@@ -11,9 +13,10 @@ from .similarity import (
     bhattacharyya_distance,
     configurational_entropy
 )
-from .generation import gen_mv
 
 __all__ = [
+    "cross_validate_component_scan",
+    "sgmm_fit_with_attempts",
     "write_aligned_cluster_trajectories",
     "write_representative_frames",
     "generate_cluster_trajectories",
@@ -23,6 +26,5 @@ __all__ = [
     "maha_dist2",
     "bhattacharyya_distance",
     "configurational_entropy",
-    "gen_mv"
 ]
 

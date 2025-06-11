@@ -1,9 +1,9 @@
 import numpy as np
 import torch
-import align
+from . import align
+from . import generation
 from .em import kronecker
 from .em import uniform
-from .utils import generation
 
 class ShapeGMM:
     """
@@ -143,7 +143,7 @@ class ShapeGMM:
             if self.n_components > 1:
                 component_ids = np.random.choice(self.n_components, size=self.n_train_frames)
             else:
-                component_ids = np.zeros(self.n_train_frames)
+                component_ids = np.zeros(self.n_train_frames,dtype=int)
 
         self._init_components_flag = True
         return component_ids
@@ -276,13 +276,13 @@ class ShapeGMM:
 
         if self.covar_type == 'uniform':
             vars_tensor = torch.tensor(self.vars_, dtype=torch.float64, device=self.device)
-            component_frame_ln_likelihoods_tensor = uniform_sgmm_lib.torch_sgmm_expectation_uniform(
+            component_frame_ln_likelihoods_tensor = uniform.torch_sgmm_expectation_uniform(
                 traj_tensor, means_tensor, vars_tensor
             )
         else:
             precisions_tensor = torch.tensor(self.precisions_, dtype=torch.float64, device=self.device)
             lpdets_tensor = torch.tensor(self.lpdets_, dtype=torch.float64, device=self.device)
-            component_frame_ln_likelihoods_tensor = kronecker_sgmm_lib.torch_sgmm_expectation_kronecker(
+            component_frame_ln_likelihoods_tensor = kronecker.torch_sgmm_expectation_kronecker(
                 traj_tensor, means_tensor, precisions_tensor, lpdets_tensor
             )
 

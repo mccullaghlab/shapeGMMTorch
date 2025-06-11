@@ -2,11 +2,12 @@ import numpy as np
 import time
 import sys
 import torch
+from typing import Literal
 import MDAnalysis as md
 from scipy import stats
 from ..core import ShapeGMM
-import ..align
-import .generation
+from .. import align
+from .. import generation
 
 
 def cross_validate_component_scan(traj_data, component_array, train_fraction=0.9, frame_weights=None, thresh=1e-3, kabsch_thresh=1e-1, covar_type="kronecker", n_training_sets=3, n_attempts=10, dtype=torch.float32, device=torch.device("cuda:0"), verbose=True):
@@ -201,7 +202,7 @@ def generate_cluster_trajectories(sgmm, n_frames_per_cluster=100):
     # loop through clusters
     for cluster_id in range(sgmm.n_clusters):
 
-        trj = generate_points.gen_mv(sgmm.centers[cluster_id],sgmm.precisions[cluster_id],n_frames_per_cluster)
+        trj = generation.gen_mv(sgmm.centers[cluster_id],sgmm.precisions[cluster_id],n_frames_per_cluster)
         pdb_file_name = "cluster" + str(cluster_id+1) + "_mean.pdb"
         dcd_file_name = "cluster" + str(cluster_id+1) + "_" + str(n_frames_per_cluster) + "frames.dcd"
         # write pdb of mean structure
@@ -302,7 +303,7 @@ def write_representative_frames(sgmm, traj_data, cluster_ids):
         sgmmM.is_fitted_ = True
         # compute LL using the predict function
         indeces = np.argwhere(cluster_ids==cluster_id).flatten()
-        representive_frame_id = indeces[np.argmax(sgmmM.predict_proba(traj_data[indeces])]
+        representive_frame_id = indeces[np.argmax(sgmmM.predict_proba(traj_data[indeces]))]
         # create MDAnalysis universe to print frame
         u = md.Universe.empty(n_atoms, 1, atom_resindex=np.zeros(n_atoms), trajectory=True)
         sel_all = u.select_atoms("all")
