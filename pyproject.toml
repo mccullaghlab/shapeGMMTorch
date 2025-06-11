@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shapeGMMTorch"
+version = "2.0.0"
+description = "Gaussian Mixture Model clustering in shape space using PyTorch"
+readme = "README.md"
+requires-python = ">=3.7"
+license = { text = "MIT" }
+authors = [
+  { name = "Martin McCullagh", email = "martin.mccullagh@okstate.edu" }
+]
+dependencies = [
+  "numpy",
+  "scipy",
+  "torch>=2.6",
+  "MDAnalysis",
+  "matplotlib",
+  "pyemma"
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.urls]
+Homepage = "https://github.com/mccullaghlab/shapeGMMTorch"
+Repository = "https://github.com/mccullaghlab/shapeGMMTorch"
+Issues = "https://github.com/mccullaghlab/shapeGMMTorch/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+

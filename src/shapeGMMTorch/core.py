@@ -1,9 +1,9 @@
 import numpy as np
 import torch
 import align
-import uniform_sgmm_lib
-import kronecker_sgmm_lib
-import generate_points
+from .em import kronecker
+from .em import uniform
+from .utils import generation
 
 class ShapeGMM:
     """
@@ -85,7 +85,7 @@ class ShapeGMM:
         n_components: int,
         log_thresh: float = 1E-3,
         max_steps: int = 200,
-        covar_type: str = "uniform",
+        covar_type: str = "kronecker",
         init_component_method: str = "random",
         sort: bool = True,
         kabsch_thresh: float = 1E-1,
@@ -118,10 +118,6 @@ class ShapeGMM:
         if self.verbose:
             print(*args)
 
-    def _init_random_components(self, n_frames: int) -> np.ndarray:
-        """Randomly assign frames to components."""
-        return np.random.choice(self.n_components, size=n_frames)
-
     def _init_components(self, traj_tensor: torch.Tensor, component_ids: np.ndarray = None):
         self.n_train_frames = traj_tensor.shape[0]
         self.n_atoms = traj_tensor.shape[1]
@@ -144,7 +140,10 @@ class ShapeGMM:
         elif self.init_component_method == "read" and component_ids is not None:
             component_ids = component_ids
         else:
-            component_ids = np.random.choice(self.n_components, size=self.n_train_frames)
+            if self.n_components > 1:
+                component_ids = np.random.choice(self.n_components, size=self.n_train_frames)
+            else:
+                component_ids = np.zeros(self.n_train_frames)
 
         self._init_components_flag = True
         return component_ids
@@ -185,12 +184,12 @@ class ShapeGMM:
 
         if self.covar_type == "uniform":
             vars_tensor = torch.empty(self.n_components, dtype=torch.float64, device=self.device)
-            em_step = uniform_sgmm_lib.torch_sgmm_uniform_em
+            em_step = uniform.torch_sgmm_uniform_em
             em_args = (traj_tensor, frame_weights_tensor, means_tensor, vars_tensor, ln_weights_tensor)
         else:
             precisions_tensor = torch.empty((self.n_components, self.n_atoms, self.n_atoms), dtype=torch.float64, device=self.device)
             lpdets_tensor = torch.empty(self.n_components, dtype=torch.float64, device=self.device)
-            em_step = kronecker_sgmm_lib.torch_sgmm_kronecker_em
+            em_step = kronecker.torch_sgmm_kronecker_em
             em_args = (traj_tensor, frame_weights_tensor, means_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor)
 
         for k in range(self.n_components):
@@ -382,7 +381,7 @@ class ShapeGMM:
             raise RuntimeError("ShapeGMM must be fit before calling generate().")
             
         # generate random component ids based on frame weights - not could adapt this to account for transition matrix
-        component_ids = generate_points.component_ids_from_rand(np.random.rand(n_frames),self.weights)
+        component_ids = generation.component_ids_from_rand(np.random.rand(n_frames),self.weights)
         trj = np.empty((n_frames,self.n_atoms,3))
         for component_id in range(self.n_components):
             if self.covar_type == "kronecker":
@@ -396,7 +395,7 @@ class ShapeGMM:
                         if i != j:
                             precision[i,j] = wsum
             indeces = np.argwhere(component_ids == component_id).flatten()
-            trj[indeces] = generate_points.gen_mv(self.means_[component_id],precision,indeces.size)
+            trj[indeces] = generation.gen_mv(self.means_[component_id],precision,indeces.size)
         return trj
 
     # sort the object based on component weights

@@ -10,14 +10,10 @@ This package is dependent on the following packages:
 
 1. Python>=3.6 
 2. numpy
-3. torch>=1.11 
-
-The examples are also dependent on:
-
-1. MDAnalysis
-2. matplotlib
-3. pyemma
-4. shapeGMM
+3. scipy
+4. torch>=2.6  
+5. MDAnalysis
+6. Matplotlib
 
 ## Installation
 
@@ -29,12 +25,6 @@ or by downloading from github and then running
 
 `python setup.py install`
 
-### Installation on a MAC
-
-I have found that PyTorch does not work on a mac using standard `pip install torch` or conda.  Instead, you have to create a special `nomkl` conda environment and install all necessary packages in there.  There are various blogs and/or stack overflow threads on this.
-
-After the `nomkl` conda environment has been created and all dependencies have been added to that environment, shapeGMMTorch can be installed.  Only the `torch.device("cpu")` device will work on a mac, however.
-
 ## Usage 
 
 This package is designed to mimic the usage of the sklearn package.  You first initiliaze the object and then fit.  Predict can be done once the model is fit.  Fit and ppredict functions take particle position trajectories as input in the form of a `(n_frames, n_atoms, 3)` numpy array.
@@ -45,19 +35,19 @@ This package is designed to mimic the usage of the sklearn package.  You first i
 
 Uniform covariance (spherical, uncorrelated, homogeneous):
 
-`uni_sgmm = ShapeGMM(n_clusters, covar_type = 'uniform', verbose=True)`
+`uni_sgmm = ShapeGMM(n_components, covar_type = 'uniform', verbose=True)`
 
 Kronecker product covariance (formerly call weighted covariance; spherical, correlated, heterogeneous):
 
-`kron_sgmm = ShapeGMM(n_clusters, covar_type = 'kronecker', verbose=True)`
+`kron_sgmm = ShapeGMM(n_components, covar_type = 'kronecker', verbose=True)`
 
 During initialization, the following options are availble:
 
-	- n_clusters (required)   - integer number of clusters must be input
+	- n_components (required) - integer number of clusters must be input
 	- covar_type              - string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'uniform'.
 	- log_thresh              - float threshold in log likelihood difference to determine convergence. Default value is 1e-3.
 	- max_steps               - integer maximum number of steps that the GMM procedure will do.  Default is 200.
-	- init_cluster_method     - string dictating how to initialize clusters.  Understood values are 'chunk', 'read' and 'random'.  Default is 'random'.
+	- init_component_method   - string dictating how to initialize clusters.  Understood values are 'chunk', 'read' and 'random'.  Default is 'random'.
 	- sort                    - boolean dictating whether to sort the object by cluster population after fitting.  Default is True.
 	- kabsch_thresh           - float dictating convergence criteria for each iterative alignment (Maximization step).  Default value is 1e-1.
 	- dtype                   - Torch data type to be used.  Default is torch.float32.
@@ -85,43 +75,41 @@ If these options are used the fit call looks like
 
 ### Predict:
 
-Once the shapeGMM object has been fit, it can be used to precict cluster IDs, aligned trajectory, and log likelihood per frame for a new, or cross validation, trajectory.  The number of atoms must remain the same.  The simple syntax is as follows:
+Once the shapeGMM object has been fit, it can be used to precict component IDs and log likelihood per frame for a new, or cross validation, trajectory.  The number of atoms must remain the same.  The simple syntax is as follows:
 
-`cluster_ids, aligned_traj, log_likelihood = uni_sgmm.predict(predict_positions)`
+`component_ids  = uni_sgmm.predict(predict_positions)`
+`log_likelihood = uni_sgmm.score(predict_positions)`
 
-`clusters_ids, aligned_traj, log_likelihood = kron_sgmm.predict(predict_positions)`
+`component_ids = kron_sgmm.predict(predict_positions)`
+`log_likelihood = kron_sgmm.score(predict_positions)`
 
-where `predict_positions` is an array of dimensions `(n_predict_frames, n_atoms, 3)`. Notice there is no difference in syntax when precicting the two covariance types.  If the predict frames have a non-unifrom frame weight, this can be accounted for  
+where `predict_positions` is an array of dimensions `(n_predict_frames, n_atoms, 3)`. Notice there is no difference in syntax when precicting the two covariance types.  If the predict frames have a non-unifrom frame weight, this can be accounted for in the score function with an additional option 
 
 	- frame_weights (optional) - (n_predict_frames) float array of relative frame weights.  If none are provided the code assumes equal weights for all frames.
 
 If this option is used the predict call will look like
 
-`cluster_ids, log_likelihood = uni_sgmm.predict(predict_positions, frame_weights = predict_frame_weights)`
+`log_likelihood = uni_sgmm.score(predict_positions, frame_weights = predict_frame_weights)`
 
-`clusters_ids, log_likelihood = kron_sgmm.predict(predict_positions, frame_weights = predict_frame_weights)`
+`log_likelihood = kron_sgmm.score(predict_positions, frame_weights = predict_frame_weights)`
 
 ## Attributes
 
 After being properly fit, a shapeGMM object will have the following attributes:
 
-	- n_clusters	             - integer of how many clusters were used in training
+	- n_components	             - integer of how many clusters were used in training
 	- n_atoms                    - integer of how many atoms were in the training data
 	- n_train_frames             - integer of how many frames were in the training data
-    - train_frame_weights        - float array of frane weights used in training 
-	- clusters_ids               - integer array of cluster ids for training data
-	- log_likelihood             - float log likelihood of training set
-    - train_frame_log_likelihood - float array of LLs for each frame
-	- weights                    - (n_clusters) float array of cluster weights
-	- centers	                 - (n_clusters, n_atoms, 3) float array of cluster centers/averages
+	- weights_                   - (n_components) float array of cluster weights
+	- means_	                 - (n_components, n_atoms, 3) float array of cluster centers/averages
 
 Uniform covariance specific attributes
 
-	- vars		       	         - (n_clusters) float array of cluster variances
+	- vars		       	         - (n_components) float array of cluster variances
 
 Kronecker covariance specific attributes
 
-	- precisions	   	         - (n_clusters, n_atoms, n_atoms) float array of cluster precisions (inverse covariances)
-	- lpdets	    	         - (n_clusters) float array of ln(det(covar))
+	- precisions	   	         - (n_components, n_atoms, n_atoms) float array of cluster precisions (inverse covariances)
+	- lpdets	    	         - (n_components) float array of ln(det(covar))
 
 

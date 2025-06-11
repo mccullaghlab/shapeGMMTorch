@@ -4,11 +4,12 @@ import sys
 import torch
 import MDAnalysis as md
 from scipy import stats
-from core import ShapeGMM
-import align
-import generate_points
+from ..core import ShapeGMM
+import ..align
+import .generation
 
-def cross_validate_component_scan(traj_data, train_fraction=0.9, frame_weights=[], thresh=1e-3, kabsch_thresh=1e-1, covar_type="kronecker", component_array=np.arange(2, 9, 1).astype(int), n_training_sets=10, n_attempts=5, dtype=torch.float64, device=torch.device("cpu"), verbose=True):
+
+def cross_validate_component_scan(traj_data, component_array, train_fraction=0.9, frame_weights=None, thresh=1e-3, kabsch_thresh=1e-1, covar_type="kronecker", n_training_sets=3, n_attempts=10, dtype=torch.float32, device=torch.device("cuda:0"), verbose=True):
     """
     Perform cross-validation for ShapeGMM over a range of number of components.
 
@@ -16,6 +17,8 @@ def cross_validate_component_scan(traj_data, train_fraction=0.9, frame_weights=[
     ----------
     traj_data : np.ndarray
         Trajectory data of shape (n_frames, n_atoms, 3).
+    component_array : np.ndarray type int
+        Array of components numbers to scan. e.g. [1, 2, 3, 4, 5]
     train_fraction : float
         Fraction of frames to use for training (0 < train_fraction < 1).
     frame_weights : list or np.ndarray, optional
@@ -26,8 +29,6 @@ def cross_validate_component_scan(traj_data, train_fraction=0.9, frame_weights=[
         Convergence threshold for alignment.
     covar_type : str
         Covariance type ('uniform' or 'kronecker').
-    component_array : np.ndarray
-        Array of components numbers to scan.
     n_training_sets : int
         Number of training/CV splits.
     n_attempts : int
@@ -61,8 +62,8 @@ def cross_validate_component_scan(traj_data, train_fraction=0.9, frame_weights=[
         print("Number of training sets:", n_training_sets)
         print("Number of attempts per set/component:", n_attempts)
         print("Component array:", component_array)
-        print("%15s %15s %15s %19s %15s" % ("Training Set", "N Components", "Attempt", "Log Like per Frame", "CPU Time (s)"))
-        print("%84s" % ("-" * 84))
+        print("%15s %15s %15s %19s %15s" % ("Training Set", "N Components", "Attempt", "Log Like per Frame", "Wallclock Time (s)"))
+        print("%84s" % ("-" * 90))
         sys.stdout.flush()
 
     for i in range(n_training_sets):
@@ -71,12 +72,12 @@ def cross_validate_component_scan(traj_data, train_fraction=0.9, frame_weights=[
 
         traj_train = traj_data[train_indices]
         traj_cv = traj_data[cv_indices]
-        if len(frame_weights) > 0:
+        if frame_weights is not None:
             weights_train = frame_weights[train_indices]
             weights_cv = frame_weights[cv_indices]
         else:
-            weights_train = []
-            weights_cv = []
+            weights_train = None
+            weights_cv = None
 
         for j, k in enumerate(component_array):
             best_model = None
@@ -84,7 +85,7 @@ def cross_validate_component_scan(traj_data, train_fraction=0.9, frame_weights=[
             current_attempts = 1 if k == 1 else n_attempts
 
             for attempt in range(current_attempts):
-                start_time = time.process_time()
+                start_time = time.time()
                 model = ShapeGMM(
                     n_components=k,
                     log_thresh=thresh,
@@ -92,15 +93,15 @@ def cross_validate_component_scan(traj_data, train_fraction=0.9, frame_weights=[
                     dtype=dtype,
                     device=device,
                     kabsch_thresh=kabsch_thresh,
-                    random_seed=np.random.randint(0, 10000),
+                    random_seed=1234 + attempt*11,
                     verbose=False
                 )
                 model.fit(traj_train, frame_weights=weights_train)
-                _, log_likelihood = model.predict(traj_train, weights_train)
-                elapsed_time = time.process_time() - start_time
+                log_likelihood = model.score(traj_train, weights_train)
+                elapsed_time = time.time() - start_time
 
                 if verbose:
-                    print("%15d %15d %15d %19.4f %15.3f" % (i + 1, k, attempt + 1, log_likelihood / n_train_frames, elapsed_time))
+                    print("%15d %15d %15d %19.4f %15.3f" % (i + 1, k, attempt + 1, log_likelihood, elapsed_time))
                     sys.stdout.flush()
 
                 if log_likelihood > best_log_lik:
@@ -108,12 +109,12 @@ def cross_validate_component_scan(traj_data, train_fraction=0.9, frame_weights=[
                     best_model = model
 
             train_log_liks[i, j] = best_log_lik
-            _, cv_log_lik = best_model.predict(traj_cv, weights_cv)
+            cv_log_lik = best_model.score(traj_cv, weights_cv)
             cv_log_liks[i, j] = cv_log_lik
 
     return train_log_liks, cv_log_liks
 
-def sgmm_fit_with_attempts(traj_data, n_components=4, thresh=1e-3, kabsch_thresh=1e-1, covar_type="kronecker", frame_weights=[], n_attempts=5, dtype=torch.float32, device=torch.device("cuda:0"), verbose=True):
+def sgmm_fit_with_attempts(traj_data, n_components, n_attempts=10, covar_type="kronecker", frame_weights=None, thresh=1e-3, kabsch_thresh=1e-1, dtype=torch.float32, device=torch.device("cuda:0"), verbose=True):
     """
     Fit ShapeGMM model using multiple attempts and return the best model.
 
@@ -123,16 +124,16 @@ def sgmm_fit_with_attempts(traj_data, n_components=4, thresh=1e-3, kabsch_thresh
         Trajectory data of shape (n_frames, n_atoms, 3).
     n_components : int
         Number of components to fit.
+    n_attempts : int
+        Number of fitting attempts.
+    covar_type : str
+        Covariance type ('uniform' or 'kronecker').
+        frame_weights : list or np.ndarray
+        Optional frame weights.
     thresh : float
         Log-likelihood convergence threshold.
     kabsch_thresh : float
         Convergence threshold for alignment.
-    covar_type : str
-        Covariance type ('uniform' or 'kronecker').
-    frame_weights : list or np.ndarray
-        Optional frame weights.
-    n_attempts : int
-        Number of fitting attempts.
     dtype : torch.dtype
         Tensor data type.
     device : torch.device
@@ -146,20 +147,25 @@ def sgmm_fit_with_attempts(traj_data, n_components=4, thresh=1e-3, kabsch_thresh
         Best fitted ShapeGMM model.
     """
     n_frames = traj_data.shape[0]
+    n_atoms = traj_data.shape[1]
 
     if verbose:
-        print("Number of training frames:", n_frames)
-        print("Number of components:", n_components)
-        print("Number of attempts:", n_attempts)
-        print("%8s %19s %15s" % ("Attempt", "Log Like per Frame", "CPU Time (s)"))
-        print("%50s" % ("-" * 50))
+        print(f"Number of components    : {n_components}")
+        print(f"Number of attempts      : {n_attempts}")
+        print(f"Covariance type         : {covar_type}")
+        print(f"Data type (dtype)       : {dtype}")
+        print(f"Device                  : {device}")
+        print(f"Number of train frames  : {n_frames}")
+        print(f"Number of atoms         : {n_atoms}")
+        print("%8s %19s %15s" % ("Attempt", "Log Like per Frame", "Wallclock Time (s)"))
+        print("%50s" % ("-" * 60))
         sys.stdout.flush()
 
     best_model = None
     best_log_lik = -np.inf
 
     for attempt in range(n_attempts):
-        start_time = time.process_time()
+        start_time = time.time()
         model = ShapeGMM(
             n_components=n_components,
             log_thresh=thresh,
@@ -167,15 +173,15 @@ def sgmm_fit_with_attempts(traj_data, n_components=4, thresh=1e-3, kabsch_thresh
             dtype=dtype,
             device=device,
             kabsch_thresh=kabsch_thresh,
-            random_seed=np.random.randint(0, 10000),
+            random_seed= 45612 + 133*attempt,
             verbose=False
         )
         model.fit(traj_data, frame_weights=frame_weights)
-        _, log_likelihood = model.predict(traj_data, frame_weights)
-        elapsed_time = time.process_time() - start_time
+        log_likelihood = model.score(traj_data, frame_weights)
+        elapsed_time = time.time() - start_time
 
         if verbose:
-            print("%8d %19.4f %15.3f" % (attempt + 1, log_likelihood / n_frames, elapsed_time))
+            print("%8d %19.4f %15.3f" % (attempt + 1, log_likelihood , elapsed_time))
 
         if log_likelihood > best_log_lik:
             best_log_lik = log_likelihood
@@ -209,38 +215,70 @@ def generate_cluster_trajectories(sgmm, n_frames_per_cluster=100):
         W.close()
 
 # write aligned cluster trajectories
-def write_aligned_cluster_trajectories(traj_data, cluster_ids, covar_type='kronecker',dtype=torch.float64,device=torch.device("cpu")):
+def write_aligned_cluster_trajectories(
+    traj_data: np.ndarray,
+    cluster_ids: np.ndarray,
+    covar_type: Literal["kronecker", "uniform"] = "kronecker",
+    dtype: torch.dtype = torch.float64,
+    device: torch.device = torch.device("cpu")
+) -> None:
     """
-    Write trajectories for each cluster from trajectory data and cluster ids
+    Write aligned trajectories for each cluster in a trajectory dataset.
+    
+    Parameters
+    ----------
+    traj_data : np.ndarray
+        Trajectory data of shape (n_frames, n_atoms, 3).
+    cluster_ids : np.ndarray
+        Cluster ID for each frame in the trajectory.
+    covar_type : {"kronecker", "uniform"}, optional
+        Type of covariance model to use for alignment. Default is "kronecker".
+    dtype : torch.dtype, optional
+        Data type for internal tensor operations. Default is torch.float64.
+    device : torch.device, optional
+        Device to perform computations on. Default is CPU.
     """
-    # get meta data from inputs
-    n_frames = traj_data.shape[0]
-    n_atoms = traj_data.shape[1]
-    n_cluster_frames = np.unique(cluster_ids,return_counts=True)[1]
-    n_clusters = n_cluster_frames.size
-    # loop through clusters
-    for cluster_id in range(n_clusters):
-        # create MDAnalysis universe
+    n_frames, n_atoms, _ = traj_data.shape
+    unique_ids, cluster_sizes = np.unique(cluster_ids, return_counts=True)
+    n_clusters = len(unique_ids)
+
+    align_fn = {
+        "kronecker": align.torch_iterative_align_kronecker,
+        "uniform": align.torch_iterative_align_uniform
+    }.get(covar_type.lower())
+
+    if align_fn is None:
+        raise ValueError(f"Unsupported covariance model: '{covar_type}'. Choose 'kronecker' or 'uniform'.")
+
+    for cluster_id, size in zip(unique_ids, cluster_sizes):
+        # Extract and center frames in cluster
+        trj_tensor = torch.tensor(traj_data[cluster_ids == cluster_id], dtype=dtype, device=device)
+        trj_tensor = torch_remove_center_of_geometry(trj_tensor)
+
+        # Align frames
+        aligned_traj_tensor, *_ = align_fn(trj_tensor)
+        aligned_traj = aligned_traj_tensor.cpu().numpy()
+
+        # Create MDAnalysis universe
         u = md.Universe.empty(n_atoms, 1, atom_resindex=np.zeros(n_atoms), trajectory=True)
-        u.trajectory.n_frames = n_cluster_frames[cluster_id]
+        u.trajectory.n_frames = size
         sel_all = u.select_atoms("all")
-        # align cluster trajectory
-        trj_tensor = torch.tensor(traj_data[cluster_ids==cluster_id],dtype=dtype,device=device)
-        trj_tensor = align.torch_remove_center_of_geometry(trj_tensor)
-        aligned_traj_tensor = align.torch_iterative_align_kronecker(trj_tensor)[0]
-        trj = aligned_traj_tensor.cpu().numpy()
-        # create file names
-        pdb_file_name = "cluster" + str(cluster_id+1) + "_frame1.pdb"
-        dcd_file_name = "cluster" + str(cluster_id+1) + "_" + str(n_cluster_frames[cluster_id]) + "frames.dcd"
-        # write pdb of mean structure
-        sel_all.positions = trj[0]
-        sel_all.write(pdb_file_name)
-        # write dcd of generated trajectory
-        with md.Writer(dcd_file_name, sel_all.n_atoms) as W:
-            for ts in range(n_cluster_frames[cluster_id]):
-                sel_all.positions = trj[ts]
-                W.write(sel_all)
-        W.close()
+
+        # Generate file names
+        cluster_str = f"cluster{cluster_id + 1}"
+        pdb_file = f"{cluster_str}_frame1.pdb"
+        dcd_file = f"{cluster_str}_{size}frames.dcd"
+
+        # Write PDB (first frame)
+        sel_all.positions = aligned_traj[0]
+        sel_all.write(pdb_file)
+
+        # Write DCD trajectory
+        with md.Writer(dcd_file, sel_all.n_atoms) as writer:
+            for ts in range(size):
+                sel_all.positions = aligned_traj[ts]
+                writer.write(sel_all)
+
 
 # write representative frames
 def write_representative_frames(sgmm, traj_data, cluster_ids):
@@ -261,11 +299,10 @@ def write_representative_frames(sgmm, traj_data, cluster_ids):
         sgmmM.precisions = sgmm.precisions[cluster_id].reshape(1,n_atoms,n_atoms)
         sgmmM.lpdets = np.array([sgmm.lpdets[cluster_id]])
         sgmmM.n_atoms = sgmm.n_atoms
-        sgmmM._gmm_fit_flag = True
+        sgmmM.is_fitted_ = True
         # compute LL using the predict function
         indeces = np.argwhere(cluster_ids==cluster_id).flatten()
-        sgmmM.predict(traj_data[indeces])
-        representive_frame_id = indeces[np.argmax(sgmmM.predict_frame_log_likelihood)]
+        representive_frame_id = indeces[np.argmax(sgmmM.predict_proba(traj_data[indeces])]
         # create MDAnalysis universe to print frame
         u = md.Universe.empty(n_atoms, 1, atom_resindex=np.zeros(n_atoms), trajectory=True)
         sel_all = u.select_atoms("all")

@@ -15,4 +15,10 @@ dist
 debug
 # pycache
 __pycache__
-
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.build/
+dist/

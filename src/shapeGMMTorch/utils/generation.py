@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.stats import multivariate_normal
 
 def cluster_ids_from_rand(random_nums,weights):
     running_sum = 0.0

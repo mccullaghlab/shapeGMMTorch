@@ -2,7 +2,7 @@ import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
 import random
-import align
+import ..align
 import torch
 
 @torch.no_grad()

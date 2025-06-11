@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import torch
 from scipy import stats
-from .core import ShapeGMM
+from ..core import ShapeGMM
 
 def maha_dist2(x1, x2, weights):
     """

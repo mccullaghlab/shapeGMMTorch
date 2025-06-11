@@ -1,2 +1,5 @@
 numpy
-torch>=1.11
+scipy
+torch>=2.6 
+matplotlib
+MDAnalysis
