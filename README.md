@@ -10,10 +10,7 @@ This package is dependent on the following packages:
 
 1. Python>=3.6 
 2. numpy
-3. torch>=1.11 (==1.11 if option 4 is used)
-4. Optional: torch_batch_svd available from https://github.com/KinglittleQ/torch-batch-svd
-
-The last package is for the SVD part of the alignment and is faster than the native batch torch library for certain devices. I have found it to be slower than the torch native SVD for the latest hardware and software versions. 
+3. torch>=1.11 
 
 The examples are also dependent on:
 
@@ -44,15 +41,15 @@ This package is designed to mimic the usage of the sklearn package.  You first i
 
 ### Initialize:
 
-`from shapeGMMTorch import torch_sgmm`
+`from shapeGMMTorch import ShapeGMM`
 
 Uniform covariance (spherical, uncorrelated, homogeneous):
 
-`usgmm = torch_sgmm.ShapeGMMTorch(n_clusters, covar_type = 'uniform', verbose=True)`
+`uni_sgmm = ShapeGMM(n_clusters, covar_type = 'uniform', verbose=True)`
 
 Kronecker product covariance (formerly call weighted covariance; spherical, correlated, heterogeneous):
 
-`wsgmm = torch_sgmm.ShapeGMMTorch(n_clusters, covar_type = 'kronecker', verbose=True)`
+`kron_sgmm = ShapeGMM(n_clusters, covar_type = 'kronecker', verbose=True)`
 
 During initialization, the following options are availble:
 
@@ -71,9 +68,9 @@ During initialization, the following options are availble:
 
 A standard fit can be performed in the following manner:
 
-`uniform_aligned_trajectory = usgmm.fit(train_positions)`
+`uni_sgmm.fit(train_positions)`
 
-`kronecker_aligned_trajectory = wsgmm.fit(train_positions)`
+`kron_sgmm.fit(train_positions)`
 
 where `train_positions` is an array of dimensions `(n_train_frames, n_atoms, 3)`. Notice there is no difference in syntax when fitting the two covariance types.  Two additional options are available during the fit routine which may be necessary under certain situations:
 
@@ -82,17 +79,17 @@ where `train_positions` is an array of dimensions `(n_train_frames, n_atoms, 3)`
 
 If these options are used the fit call looks like
 
-`uniform_aligned_trajectory = usgmm.fit(train_positions, cluster_ids = initial_cluster_ids, frame_weights = train_frame_weights)`
+`uni_sgmm.fit(train_positions, cluster_ids = initial_cluster_ids, frame_weights = train_frame_weights)`
 
-`kronecker_aligned_trajectory = wsgmm.fit(train_positions, cluster_ids = initial_cluster_ids, frame_weights = train_frame_weights)`
+`kron_sgmm.fit(train_positions, cluster_ids = initial_cluster_ids, frame_weights = train_frame_weights)`
 
 ### Predict:
 
 Once the shapeGMM object has been fit, it can be used to precict cluster IDs, aligned trajectory, and log likelihood per frame for a new, or cross validation, trajectory.  The number of atoms must remain the same.  The simple syntax is as follows:
 
-`cluster_ids, aligned_traj, log_likelihood = usgmm.predict(predict_positions)`
+`cluster_ids, aligned_traj, log_likelihood = uni_sgmm.predict(predict_positions)`
 
-`clusters_ids, aligned_traj, log_likelihood = wsgmm.predict(predict_positions)`
+`clusters_ids, aligned_traj, log_likelihood = kron_sgmm.predict(predict_positions)`
 
 where `predict_positions` is an array of dimensions `(n_predict_frames, n_atoms, 3)`. Notice there is no difference in syntax when precicting the two covariance types.  If the predict frames have a non-unifrom frame weight, this can be accounted for  
 
@@ -100,9 +97,9 @@ where `predict_positions` is an array of dimensions `(n_predict_frames, n_atoms,
 
 If this option is used the predict call will look like
 
-`cluster_ids, aligned_traj, log_likelihood = usgmm.predict(predict_positions, frame_weights = predict_frame_weights)`
+`cluster_ids, log_likelihood = uni_sgmm.predict(predict_positions, frame_weights = predict_frame_weights)`
 
-`clusters_ids, aligned_traj, log_likelihood = wsgmm.predict(predict_positions, frame_weights = predict_frame_weights)`
+`clusters_ids, log_likelihood = kron_sgmm.predict(predict_positions, frame_weights = predict_frame_weights)`
 
 ## Attributes
 

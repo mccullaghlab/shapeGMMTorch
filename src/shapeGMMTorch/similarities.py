@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import torch
 from scipy import stats
-from . import torch_sgmm
+from .core import ShapeGMM
 
 def maha_dist2(x1, x2, weights):
     """
@@ -52,7 +52,7 @@ def js_divergence(sgmmP, sgmmQ, n_points):
     sterr(js)  : (float) propagated error of sampled JS divergence
     """
     # create new M object that is 0.5(Q+P)
-    sgmmM = torch_sgmm.ShapeGMMTorch(sgmmP.n_clusters+sgmmQ.n_clusters,covar_type="kronecker",device=torch.device("cpu"),dtype=torch.float64)
+    sgmmM = ShapeGMM(sgmmP.n_clusters+sgmmQ.n_clusters,covar_type="kronecker",device=torch.device("cpu"),dtype=torch.float64)
     sgmmM.weights = 0.5*np.append(sgmmP.weights,sgmmQ.weights)
     sgmmM.centers = np.concatenate((sgmmP.centers,sgmmQ.centers))
     sgmmM.precisions = np.concatenate((sgmmP.precisions,sgmmQ.precisions))
