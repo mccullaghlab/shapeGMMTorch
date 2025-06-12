@@ -44,16 +44,16 @@ def cross_validate_component_scan(traj_data, component_array, train_fraction=0.9
     Returns
     -------
     train_log_liks : np.ndarray
-        Log-likelihoods on training sets.
+        Log-likelihoods on training sets. Shape (len(component_array), n_training_sets)
     cv_log_liks : np.ndarray
-        Log-likelihoods on validation sets.
+        Log-likelihoods on validation sets. Shape (len(component_array), n_training_sets)
     """
     n_frames = traj_data.shape[0]
     n_atoms = traj_data.shape[1]
     assert 0.0 < train_fraction < 1.0, "train_fraction must be between 0 and 1 (exclusive)."
     n_train_frames = int(np.floor(train_fraction * n_frames))
-    train_log_liks = np.zeros((n_training_sets, len(component_array)))
-    cv_log_liks = np.zeros((n_training_sets, len(component_array)))
+    train_log_liks = np.zeros((len(component_array), n_training_sets))
+    cv_log_liks = np.zeros((len(component_array), n_training_sets))
 
     if verbose:
         print("Number of atoms:", n_atoms)
@@ -109,9 +109,9 @@ def cross_validate_component_scan(traj_data, component_array, train_fraction=0.9
                     best_log_lik = log_likelihood
                     best_model = model
 
-            train_log_liks[i, j] = best_log_lik
+            train_log_liks[j, i] = best_log_lik
             cv_log_lik = best_model.score(traj_cv, weights_cv)
-            cv_log_liks[i, j] = cv_log_lik
+            cv_log_liks[j, i] = cv_log_lik
 
     return train_log_liks, cv_log_liks
 
@@ -190,47 +190,47 @@ def sgmm_fit_with_attempts(traj_data, n_components, n_attempts=10, covar_type="k
 
     return best_model
 
-# write cluster trajectories
-def generate_cluster_trajectories(sgmm, n_frames_per_cluster=100):
+# write component trajectories
+def generate_component_trajectories(sgmm, n_frames_per_component=100):
     """
-    Write generated trajectories for each cluster in shapeGMM object sgmm
+    Write generated trajectories for each component in shapeGMM object sgmm
     """
     # create MDAnalysis universe
     u = md.Universe.empty(sgmm.n_atoms, 1, atom_resindex=np.zeros(sgmm.n_atoms), trajectory=True)
-    u.trajectory.n_frames = n_frames_per_cluster
+    u.trajectory.n_frames = n_frames_per_component
     sel_all = u.select_atoms("all")
-    # loop through clusters
-    for cluster_id in range(sgmm.n_clusters):
+    # loop through component
+    for luster_id in range(sgmm.n_components):
 
-        trj = generation.gen_mv(sgmm.centers[cluster_id],sgmm.precisions[cluster_id],n_frames_per_cluster)
-        pdb_file_name = "cluster" + str(cluster_id+1) + "_mean.pdb"
-        dcd_file_name = "cluster" + str(cluster_id+1) + "_" + str(n_frames_per_cluster) + "frames.dcd"
+        trj = generation.gen_mv(sgmm.centers[component_id],sgmm.precisions[component_id],n_frames_per_component)
+        pdb_file_name = "component" + str(component_id+1) + "_mean.pdb"
+        dcd_file_name = "component" + str(component_id+1) + "_" + str(n_frames_per_component) + "frames.dcd"
         # write pdb of mean structure
-        sel_all.positions = sgmm.centers[cluster_id]
+        sel_all.positions = sgmm.centers[component_id]
         sel_all.write(pdb_file_name)
         # write dcd of generated trajectory
         with md.Writer(dcd_file_name, sel_all.n_atoms) as W:
-            for ts in range(n_frames_per_cluster):
+            for ts in range(n_frames_per_component):
                 sel_all.positions = trj[ts]
                 W.write(sel_all)
         W.close()
 
-# write aligned cluster trajectories
-def write_aligned_cluster_trajectories(
+# write aligned component trajectories
+def write_aligned_component_trajectories(
     traj_data: np.ndarray,
-    cluster_ids: np.ndarray,
+    component_ids: np.ndarray,
     covar_type: Literal["kronecker", "uniform"] = "kronecker",
     dtype: torch.dtype = torch.float64,
     device: torch.device = torch.device("cpu")
 ) -> None:
     """
-    Write aligned trajectories for each cluster in a trajectory dataset.
+    Write aligned trajectories for each component in a trajectory dataset.
     
     Parameters
     ----------
     traj_data : np.ndarray
         Trajectory data of shape (n_frames, n_atoms, 3).
-    cluster_ids : np.ndarray
+    component_ids : np.ndarray
         Cluster ID for each frame in the trajectory.
     covar_type : {"kronecker", "uniform"}, optional
         Type of covariance model to use for alignment. Default is "kronecker".
@@ -240,8 +240,8 @@ def write_aligned_cluster_trajectories(
         Device to perform computations on. Default is CPU.
     """
     n_frames, n_atoms, _ = traj_data.shape
-    unique_ids, cluster_sizes = np.unique(cluster_ids, return_counts=True)
-    n_clusters = len(unique_ids)
+    unique_ids, component_sizes = np.unique(component_ids, return_counts=True)
+    n_components = len(unique_ids)
 
     align_fn = {
         "kronecker": align.torch_iterative_align_kronecker,
@@ -251,9 +251,9 @@ def write_aligned_cluster_trajectories(
     if align_fn is None:
         raise ValueError(f"Unsupported covariance model: '{covar_type}'. Choose 'kronecker' or 'uniform'.")
 
-    for cluster_id, size in zip(unique_ids, cluster_sizes):
-        # Extract and center frames in cluster
-        trj_tensor = torch.tensor(traj_data[cluster_ids == cluster_id], dtype=dtype, device=device)
+    for component_id, size in zip(unique_ids, component_sizes):
+        # Extract and center frames in component
+        trj_tensor = torch.tensor(traj_data[component_ids == component_id], dtype=dtype, device=device)
         trj_tensor = torch_remove_center_of_geometry(trj_tensor)
 
         # Align frames
@@ -266,9 +266,9 @@ def write_aligned_cluster_trajectories(
         sel_all = u.select_atoms("all")
 
         # Generate file names
-        cluster_str = f"cluster{cluster_id + 1}"
-        pdb_file = f"{cluster_str}_frame1.pdb"
-        dcd_file = f"{cluster_str}_{size}frames.dcd"
+        component_str = f"component{component_id + 1}"
+        pdb_file = f"{component_str}_frame1.pdb"
+        dcd_file = f"{component_str}_{size}frames.dcd"
 
         # Write PDB (first frame)
         sel_all.positions = aligned_traj[0]
@@ -282,32 +282,31 @@ def write_aligned_cluster_trajectories(
 
 
 # write representative frames
-def write_representative_frames(sgmm, traj_data, cluster_ids):
+def write_representative_frames(sgmm, traj_data, component_ids):
     """
-    Write representative frames for each cluster
-    This is defined as the frame with the largest LL to each cluster
+    Write representative frames for each component
+    This is defined as the frame with the largest LL to each component
     """
     # get meta data from inputs
     n_frames = traj_data.shape[0]
     n_atoms = sgmm.n_atoms
-    n_clusters = sgmm.n_clusters
-    # loop through clusters
-    for cluster_id in range(n_clusters):
-        # create a shapeGMM object with just this cluster
+    # loop through components
+    for component_id in range(sgmm.n_components):
+        # create a shapeGMM object with just this component
         sgmmM = ShapeGMM(1,covar_type=sgmm.covar_type,device=torch.device("cpu"),dtype=sgmm.dtype)
         sgmmM.weights = np.array([1.0])
-        sgmmM.centers = sgmm.centers[cluster_id].reshape(1,n_atoms,3)
-        sgmmM.precisions = sgmm.precisions[cluster_id].reshape(1,n_atoms,n_atoms)
-        sgmmM.lpdets = np.array([sgmm.lpdets[cluster_id]])
+        sgmmM.centers = sgmm.centers[component_id].reshape(1,n_atoms,3)
+        sgmmM.precisions = sgmm.precisions[component_id].reshape(1,n_atoms,n_atoms)
+        sgmmM.lpdets = np.array([sgmm.lpdets[component_id]])
         sgmmM.n_atoms = sgmm.n_atoms
         sgmmM.is_fitted_ = True
         # compute LL using the predict function
-        indeces = np.argwhere(cluster_ids==cluster_id).flatten()
+        indeces = np.argwhere(component_ids==component_id).flatten()
         representive_frame_id = indeces[np.argmax(sgmmM.predict_proba(traj_data[indeces]))]
         # create MDAnalysis universe to print frame
         u = md.Universe.empty(n_atoms, 1, atom_resindex=np.zeros(n_atoms), trajectory=True)
         sel_all = u.select_atoms("all")
         # print pdb
-        pdb_file_name = "cluster" + str(cluster_id+1) + "_reperesentative_frame_" + str(representive_frame_id+1) + ".pdb"
+        pdb_file_name = "component" + str(component_id+1) + "_reperesentative_frame_" + str(representive_frame_id+1) + ".pdb"
         sel_all.positions = traj_data[representive_frame_id]
         sel_all.write(pdb_file_name)
