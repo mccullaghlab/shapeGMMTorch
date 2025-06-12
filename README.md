@@ -82,15 +82,25 @@ If these options are used the fit call looks like
 
 To label and score (log likelihood per frame) the training set:
 
+for uniform model:
+
 `uni_train_component_ids  = uni_sgmm.predict(train_positions)`
+
 `uni_train_log_likelihood = uni_sgmm.score(train_positions)`
 
+for kronecker model:
+
 `kron_train_component_ids = kron_sgmm.predict(train_positions)`
+
 `kron_train_log_likelihood = kron_sgmm.score(train_positions)`
 
 If the training set has non-uniform frame weights this must be taken into account in the scoring function:
 
+uniform model:
+
 `uni_train_log_likelihood = uni_sgmm.score(train_positions, frame_weights = train_frame_weights)`
+
+kronecker model:
 
 `kron_train_log_likelihood = kron_sgmm.score(train_positions, frame_weights = train_frame_weights)`
 
@@ -98,10 +108,16 @@ If the training set has non-uniform frame weights this must be taken into accoun
 
 Once the shapeGMM object has been fit, it can be used to predict component IDs and log likelihood per frame for a new, or cross validation, trajectory.  The number of atoms must remain the same.  The simple syntax is as follows:
 
+uniform model:
+
 `uni_cv_component_ids  = uni_sgmm.predict(predict_positions)`
+
 `uni_cv_log_likelihood = uni_sgmm.score(predict_positions)`
 
+kronecker model:
+
 `kron_cv_component_ids = kron_sgmm.predict(predict_positions)`
+
 `kron_cv_log_likelihood = kron_sgmm.score(predict_positions)`
 
 where `predict_positions` is an array of dimensions `(n_predict_frames, n_atoms, 3)`. Notice there is no difference in syntax when precicting the two covariance types.  If the predict frames have a non-unifrom frame weight, this can be accounted for in the score function with an additional option 
@@ -110,7 +126,11 @@ where `predict_positions` is an array of dimensions `(n_predict_frames, n_atoms,
 
 If this option is used the predict call will look like
 
+uniform model:
+
 `uni_cv_log_likelihood = uni_sgmm.score(predict_positions, frame_weights = predict_frame_weights)`
+
+kronecker model:
 
 `kron_cv_log_likelihood = kron_sgmm.score(predict_positions, frame_weights = predict_frame_weights)`
 
