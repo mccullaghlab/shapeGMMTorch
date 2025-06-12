@@ -30,7 +30,6 @@ setuptools.setup(
         "torch>=2.6",
         "MDAnalysis",
         "matplotlib",
-        "pyemma"
     ],
     include_package_data=True,
 )
