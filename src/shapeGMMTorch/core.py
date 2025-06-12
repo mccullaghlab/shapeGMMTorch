@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from . import align
+from . import align_in_place
 from . import generation
 from .em import kronecker
 from .em import uniform
@@ -164,7 +164,7 @@ class ShapeGMM:
             Weights for each frame.
         """
         traj_tensor = torch.tensor(traj_data, dtype=self.dtype, device=self.device)
-        traj_tensor = align.torch_remove_center_of_geometry(traj_tensor)
+        align_in_place.remove_center_of_geometry_in_place(traj_tensor)
 
         if not self._init_components_flag:
             self.component_ids = self._init_components(traj_tensor, component_ids)
@@ -184,12 +184,12 @@ class ShapeGMM:
 
         if self.covar_type == "uniform":
             vars_tensor = torch.empty(self.n_components, dtype=torch.float64, device=self.device)
-            em_step = uniform.torch_sgmm_uniform_em
+            em_step = uniform.sgmm_uniform_em
             em_args = (traj_tensor, frame_weights_tensor, means_tensor, vars_tensor, ln_weights_tensor)
         else:
             precisions_tensor = torch.empty((self.n_components, self.n_atoms, self.n_atoms), dtype=torch.float64, device=self.device)
             lpdets_tensor = torch.empty(self.n_components, dtype=torch.float64, device=self.device)
-            em_step = kronecker.torch_sgmm_kronecker_em
+            em_step = kronecker.sgmm_kronecker_em
             em_args = (traj_tensor, frame_weights_tensor, means_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor)
 
         for k in range(self.n_components):
@@ -197,13 +197,13 @@ class ShapeGMM:
             if indices.ndim == 0 or indices.shape == ():  # Handle n_components=1
                 indices = indices.reshape(1)
             if self.covar_type == "uniform":
-                _, mean, var = align.torch_iterative_align_uniform_weighted(
+                mean, var = align_in_place.maximum_likelihood_uniform_alignment_frame_weighted_in_place(
                     traj_tensor[indices], frame_weights_tensor[indices], thresh=self.kabsch_thresh
                 )
                 means_tensor[k].copy_(mean)
                 vars_tensor[k].copy_(var)
             else:
-                _, mean, precision, lpdet = align.torch_iterative_align_kronecker_weighted(
+                mean, precision, lpdet = align_in_place.maximum_likelihood_kronecker_alignment_frame_weighted_in_place(
                     traj_tensor[indices], frame_weights_tensor[indices], thresh=self.kabsch_thresh, max_iter=self.kabsch_max_steps
                 )
                 means_tensor[k].copy_(mean)
@@ -270,7 +270,7 @@ class ShapeGMM:
             (n_frames, n_components) log-likelihood tensor
         """
         traj_tensor = torch.tensor(traj_data, dtype=self.dtype, device=self.device)
-        traj_tensor = align.torch_remove_center_of_geometry(traj_tensor)
+        align_in_place.remove_center_of_geometry_in_place(traj_tensor)
         means_tensor = torch.tensor(self.means_, dtype=self.dtype, device=self.device)
         ln_weights_tensor = torch.tensor(np.log(self.weights_), dtype=torch.float64, device=self.device)
 

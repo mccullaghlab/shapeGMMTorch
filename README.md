@@ -48,8 +48,8 @@ Kronecker product covariance (formerly call weighted covariance; spherical, corr
 
 During initialization, the following options are availble:
 
-	- n_components (required) - integer number of copmonents must be input
-	- covar_type              - string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'uniform'.
+	- n_components (required) - integer number of components must be input
+	- covar_type              - string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'kronecker'.
 	- log_thresh              - float threshold in log likelihood difference to determine convergence. Default value is 1e-3.
 	- max_steps               - integer maximum number of steps that the GMM procedure will do.  Default is 200.
 	- init_component_method   - string dictating how to initialize components.  Understood values are 'chunk', 'read' and 'random'.  Default is 'random'.

@@ -2,7 +2,7 @@ import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
 import random
-from .. import align
+from .. import align_in_place
 import torch
 
 @torch.no_grad()
@@ -91,14 +91,14 @@ def torch_sgmm_kronecker_em(
             selected_traj = traj_tensor.index_select(0, gamma_indices)
             selected_gamma = gamma_tensor.index_select(0, gamma_indices)[:, k]
             # Perform weighted alignment update
-            new_mean, new_precision, new_lpdet = align.torch_iterative_align_kronecker_weighted(
+            new_mean, new_precision, new_lpdet = align_in_place.maximum_likelihood_kronecker_alignment_frame_weighted_in_place(
                 selected_traj, 
                 selected_gamma,
                 ref_tensor=means_tensor[k],
                 ref_precision_tensor=precisions_tensor[k],
                 thresh=thresh,
                 max_iter=max_iter
-            )[1:]  # [1:] to skip the aligned traj output
+            )
             means_tensor[k].copy_(new_mean)
             precisions_tensor[k].copy_(new_precision)
             lpdets_tensor[k].copy_(new_lpdet)
@@ -144,8 +144,8 @@ def torch_sgmm_expectation_kronecker(
 
 
     for k in range(n_clusters):
-        # Align to the center (non-destructive)
-        aligned_traj = align.torch_align_kronecker(traj_tensor, means_tensor[k], precisions_tensor[k])
+        # Align to the mean of each cluster using in place operation
+        align_in_place.align_kronecker_in_place(traj_tensor, means_tensor[k], precisions_tensor[k])
 
         # Displacement tensor
         disp = aligned_traj - means_tensor[k]  # (n_frames, n_atoms, 3) 

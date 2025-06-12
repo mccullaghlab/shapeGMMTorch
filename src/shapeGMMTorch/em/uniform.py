@@ -2,7 +2,7 @@ import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
 import random
-from .. import align
+from .. import align_in_place
 import torch
 
 @torch.no_grad()
@@ -86,7 +86,7 @@ def torch_sgmm_uniform_em(
             selected_traj = traj_tensor.index_select(0, gamma_indices)
             selected_gamma = gamma_tensor.index_select(0, gamma_indices)[:, k].to(traj_tensor.dtype)
 
-            new_mean, new_var = align.torch_iterative_align_uniform_weighted(
+            new_mean, new_var = align_in_place.maximum_likelihood_uniform_alignment_frame_weighted_in_place(
                 selected_traj,
                 selected_gamma,
                 ref_tensor=means_tensor[k],
@@ -139,7 +139,7 @@ def torch_sgmm_expectation_uniform(
 
     for k in range(n_clusters):
         # Compute squared displacements (aligned)
-        sd = align.torch_sd(traj_tensor, means_tensor[k])  # (n_frames,)
+        sd = align_in_place.trajectory_sd(traj_tensor, means_tensor[k])  # (n_frames,)
 
         # Compute log-likelihood: -0.5 * (sq / var) - const
         cluster_frame_ln_likelihoods[:, k] = sd * inv_vars[k] - log_prefactors[k]
