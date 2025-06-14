@@ -2,11 +2,12 @@ import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
 import random
+from .. import align
 from .. import align_in_place
 import torch
 
 @torch.no_grad()
-def torch_sgmm_uniform_em(
+def sgmm_uniform_em(
     traj_tensor: torch.Tensor,
     frame_weights_tensor: torch.Tensor,
     means_tensor: torch.Tensor,
@@ -52,7 +53,7 @@ def torch_sgmm_uniform_em(
     gamma_thresh_tensor = torch.tensor(gamma_thresh, dtype=torch.float64, device=device)
 
     # Expectation step
-    cluster_frame_ln_likelihoods_tensor = torch_sgmm_expectation_uniform(
+    cluster_frame_ln_likelihoods_tensor = sgmm_expectation_uniform(
         traj_tensor, means_tensor, vars_tensor
     )
 
@@ -92,7 +93,7 @@ def torch_sgmm_uniform_em(
                 ref_tensor=means_tensor[k],
                 thresh=thresh,
                 max_iter=max_iter
-            )[1:]
+                )#[1:]
             means_tensor[k].copy_(new_mean)
             vars_tensor[k].copy_(new_var)
 
@@ -101,7 +102,7 @@ def torch_sgmm_uniform_em(
 
 
 @torch.no_grad()
-def torch_sgmm_expectation_uniform(
+def sgmm_expectation_uniform(
     traj_tensor: torch.Tensor,
     means_tensor: torch.Tensor,
     vars_tensor: torch.Tensor,
@@ -138,8 +139,8 @@ def torch_sgmm_expectation_uniform(
     inv_vars = -0.5 / vars_tensor.to(torch.float64)  # (n_clusters,)
 
     for k in range(n_clusters):
-        # Compute squared displacements (aligned)
-        sd = align_in_place.trajectory_sd(traj_tensor, means_tensor[k])  # (n_frames,)
+        # Compute squared displacements after alignment
+        sd = align.trajectory_sd(traj_tensor, means_tensor[k])  # (n_frames,)
 
         # Compute log-likelihood: -0.5 * (sq / var) - const
         cluster_frame_ln_likelihoods[:, k] = sd * inv_vars[k] - log_prefactors[k]

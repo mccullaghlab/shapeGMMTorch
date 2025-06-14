@@ -276,13 +276,13 @@ class ShapeGMM:
 
         if self.covar_type == 'uniform':
             vars_tensor = torch.tensor(self.vars_, dtype=torch.float64, device=self.device)
-            component_frame_ln_likelihoods_tensor = uniform.torch_sgmm_expectation_uniform(
+            component_frame_ln_likelihoods_tensor = uniform.sgmm_expectation_uniform(
                 traj_tensor, means_tensor, vars_tensor
             )
         else:
             precisions_tensor = torch.tensor(self.precisions_, dtype=torch.float64, device=self.device)
             lpdets_tensor = torch.tensor(self.lpdets_, dtype=torch.float64, device=self.device)
-            component_frame_ln_likelihoods_tensor = kronecker.torch_sgmm_expectation_kronecker(
+            component_frame_ln_likelihoods_tensor = kronecker.sgmm_expectation_kronecker(
                 traj_tensor, means_tensor, precisions_tensor, lpdets_tensor
             )
 

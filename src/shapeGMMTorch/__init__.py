@@ -4,25 +4,22 @@ shapeGMMTorch: A modular PyTorch library for GMM-based shape clustering.
 
 from .core import ShapeGMM
 from .align import (
-    torch_remove_center_of_geometry,
-    torch_iterative_align_kronecker,
-    torch_iterative_align_uniform,
-    torch_iterative_align_kronecker_weighted,
-    torch_iterative_align_uniform_weighted,    
+    remove_center_of_geometry,
+    maximum_likelihood_kronecker_alignment,
+    maximum_likelihood_uniform_alignment,
+    maximum_likelihood_kronecker_alignment_frame_weighted,
+    maximum_likelihood_uniform_alignment_frame_weighted,    
 )
 from .generation import gen_mv, generate, cluster_ids_from_rand
 
 __all__ = [
     "ShapeGMM",
-    "torch_remove_center_of_geometry",
-    "torch_align_kronecker",
-    "torch_align_uniform",
-    "torch_iterative_align_kronecker",
-    "torch_iterative_align_uniform",
-    "torch_iterative_align_kronecker_weighted",
-    "torch_iterative_align_uniform_weighted",
-    "gen_mv", 
-    "generate", 
-    "cluster_ids_from_rand"
+    "remove_center_of_geometry",
+    "align_kronecker",
+    "align_uniform",
+    "maximum_likelihood_kronecker_alignment",
+    "maximum_likelihood_uniform_alignment",
+    "maximum_likelihood_kronecker_alignment_frame_weighted",
+    "maximum_likelihood_uniform_alignment_weighted",
 ]
 

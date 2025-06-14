@@ -8,7 +8,7 @@ import torch
 # =========================
 
 @torch.no_grad()
-def torch_align_rot_mat(traj_tensor: torch.Tensor, ref_tensor: torch.Tensor) -> torch.Tensor:
+def align_rot_mats(traj_tensor: torch.Tensor, ref_tensor: torch.Tensor) -> torch.Tensor:
     """
     Compute optimal rotation matrices to align traj_tensor frames to ref_tensor.
     """
@@ -24,7 +24,7 @@ def torch_align_rot_mat(traj_tensor: torch.Tensor, ref_tensor: torch.Tensor) -> 
     return rot_mat
 
 @torch.no_grad()
-def torch_remove_center_of_geometry(traj_tensor: torch.Tensor) -> torch.Tensor:
+def remove_center_of_geometry(traj_tensor: torch.Tensor) -> torch.Tensor:
     """
     Remove the center of geometry from each frame of traj_tensor.
     """
@@ -35,7 +35,7 @@ def torch_remove_center_of_geometry(traj_tensor: torch.Tensor) -> torch.Tensor:
     return traj_tensor - cog
 
 @torch.no_grad()
-def torch_sd(traj_tensor: torch.Tensor, ref_tensor: torch.Tensor) -> torch.Tensor:
+def trajectory_sd(traj_tensor: torch.Tensor, ref_tensor: torch.Tensor) -> torch.Tensor:
     """
     Compute squared displacement after uniform alignment to reference structure.
     """
@@ -43,7 +43,7 @@ def torch_sd(traj_tensor: torch.Tensor, ref_tensor: torch.Tensor) -> torch.Tenso
     # meta data
     n_atoms = traj_tensor.shape[1]
     # get rotation matrices
-    rot_mat = torch_align_rot_mat(traj_tensor, ref_tensor)
+    rot_mat = align_rot_mats(traj_tensor, ref_tensor)
     # do rotation
     traj_tensor = torch.matmul(traj_tensor,rot_mat)
     disp = (traj_tensor - ref_tensor).to(torch.float64)
@@ -52,7 +52,7 @@ def torch_sd(traj_tensor: torch.Tensor, ref_tensor: torch.Tensor) -> torch.Tenso
     return sd
 
 @torch.no_grad()
-def _torch_covar(disp: torch.Tensor, covar_norm: float) -> torch.Tensor:
+def _kronecker_covar(disp: torch.Tensor, covar_norm: float) -> torch.Tensor:
     n_frames = disp.shape[0]
     disp = torch.transpose(disp,0,1).reshape(-1,n_frames*3)
     covar = disp @ disp.T
@@ -62,7 +62,7 @@ def _torch_covar(disp: torch.Tensor, covar_norm: float) -> torch.Tensor:
     
 # determine the ln(det) of a singular matrix ignoring eigenvalues below threshold
 @torch.no_grad()
-def _torch_pseudo_lndet(sigma: torch.Tensor, EigenValueThresh: float = 1e-10) -> torch.Tensor:
+def _pseudo_lndet(sigma: torch.Tensor, EigenValueThresh: float = 1e-10) -> torch.Tensor:
     e = torch.linalg.eigvalsh(sigma) 
     e = torch.where(e > EigenValueThresh, e, 1.0)
     lpdet = torch.sum(torch.log(e))
@@ -70,7 +70,7 @@ def _torch_pseudo_lndet(sigma: torch.Tensor, EigenValueThresh: float = 1e-10) ->
 
 # determine the pseudo inverse and ln(det) of a singular matrix ignoring first eigenvalue
 @torch.no_grad()
-def _torch_pseudo_inv(sigma: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+def _pseudo_inv(sigma: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     # diagonalize sigma
     e, v = torch.linalg.eigh(sigma) 
     # compute the log of the pseudo determinant of sigma
@@ -90,21 +90,21 @@ def _torch_pseudo_inv(sigma: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
 
 # perform uniform Kabsch alignment between trajectory frames and reference
 @torch.no_grad()
-def torch_align_uniform(traj_tensor: torch.Tensor, ref_tensor: torch.Tensor) -> torch.Tensor:
+def align_uniform(traj_tensor: torch.Tensor, ref_tensor: torch.Tensor) -> torch.Tensor:
     """
     Uniform Kabsch alignment between trajectory frames and reference
     """
 
     assert ref_tensor.device == traj_tensor.device, "ref_tensor must be on the same device as traj_tensor"
     # get rotation matrices
-    rot_mat = torch_align_rot_mat(traj_tensor, ref_tensor)
+    rot_mat = align_rot_mats(traj_tensor, ref_tensor)
     # do rotation
     traj_tensor = torch.matmul(traj_tensor,rot_mat)
     return traj_tensor
 
 
 @torch.no_grad()
-def torch_align_kronecker(traj_tensor, ref_tensor, precision_tensor):
+def align_kronecker(traj_tensor, ref_tensor, precision_tensor):
     """
     Precision weighted Kabsch alignment between trajectory frames and reference
     """
@@ -119,7 +119,7 @@ def torch_align_kronecker(traj_tensor, ref_tensor, precision_tensor):
     # make weighted ref
     weighted_ref = torch.matmul(precision_tensor,ref_tensor.to(torch.float64)).to(dtype)
     # get rotation matrices
-    rot_mat = torch_align_rot_mat(traj_tensor, weighted_ref)
+    rot_mat = align_rot_mats(traj_tensor, weighted_ref)
     # do rotation
     traj_tensor = torch.matmul(traj_tensor,rot_mat)
     # return aligned trajectory
@@ -131,7 +131,7 @@ def torch_align_kronecker(traj_tensor, ref_tensor, precision_tensor):
 # ===============================================
 
 @torch.no_grad()
-def torch_iterative_align_uniform(
+def maximum_likelihood_uniform_alignment(
     traj_tensor: torch.Tensor,
     thresh: float = 1e-3,
     max_iter: int = 200,
@@ -182,7 +182,7 @@ def torch_iterative_align_uniform(
 
     while delta_log_lik > thresh and kabsch_iter < max_iter:
         # Get rotation matrices
-        rot_mat = torch_align_rot_mat(traj_tensor, avg)
+        rot_mat = align_rot_mats(traj_tensor, avg)
 
         # Apply rotation
         traj_tensor = torch.matmul(traj_tensor, rot_mat)
@@ -214,7 +214,7 @@ def torch_iterative_align_uniform(
 
 
 @torch.no_grad()
-def torch_iterative_align_uniform_weighted(
+def maximum_likelihood_uniform_alignment_frame_weighted(
     traj_tensor: torch.Tensor,
     weight_tensor: torch.Tensor,
     ref_tensor: torch.Tensor = None,
@@ -284,7 +284,7 @@ def torch_iterative_align_uniform_weighted(
 
     while delta_log_lik > thresh and kabsch_iter < max_iter:
         # Get rotation matrices
-        rot_mat = torch_align_rot_mat(traj_tensor, avg)
+        rot_mat = align_rot_mats(traj_tensor, avg)
 
         # Apply rotation
         traj_tensor = torch.matmul(traj_tensor, rot_mat)
@@ -317,7 +317,7 @@ def torch_iterative_align_uniform_weighted(
 
 
 @torch.no_grad()
-def torch_iterative_align_kronecker(
+def maximum_likelihood_kronecker_alignment(
     traj_tensor: torch.Tensor,
     thresh: float = 1e-3,
     max_iter: int = 200,
@@ -369,7 +369,7 @@ def torch_iterative_align_kronecker(
 
     while delta_log_lik > thresh and kabsch_iter < max_iter:
         # Get rotation matrices
-        rot_mat = torch_align_rot_mat(traj_tensor, weighted_avg)
+        rot_mat = align_rot_mats(traj_tensor, weighted_avg)
 
         # Apply rotation
         traj_tensor = torch.matmul(traj_tensor, rot_mat)
@@ -381,10 +381,10 @@ def torch_iterative_align_kronecker(
         disp = (traj_tensor - avg).to(torch.float64)
 
         # Compute covariance
-        covar = _torch_covar(disp, covar_norm)
+        covar = _kronecker_covar(disp, covar_norm)
 
         # Compute precision matrix and log pseudo-determinant
-        precision, lpdet = _torch_pseudo_inv(covar)
+        precision, lpdet = _pseudo_inv(covar)
 
         # Compute log-likelihood
         log_lik = -1.5 * lpdet
@@ -408,7 +408,7 @@ def torch_iterative_align_kronecker(
 
 
 @torch.no_grad()
-def torch_iterative_align_kronecker_weighted(
+def maximum_likelihood_kronecker_alignment_frame_weighted(
     traj_tensor: torch.Tensor,
     weight_tensor: torch.Tensor,
     ref_tensor: torch.Tensor = None,
@@ -481,7 +481,7 @@ def torch_iterative_align_kronecker_weighted(
 
     while delta_log_lik > thresh and kabsch_iter < max_iter:
         # Get rotation matrices
-        rot_mat = torch_align_rot_mat(traj_tensor, weighted_avg)
+        rot_mat = align_rot_mats(traj_tensor, weighted_avg)
 
         # Apply rotation
         traj_tensor = torch.matmul(traj_tensor, rot_mat)
@@ -498,10 +498,10 @@ def torch_iterative_align_kronecker_weighted(
         disp = (traj_tensor - avg).to(torch.float64)
 
         # Compute covariance
-        covar = _torch_covar(disp * sqrt_w, covar_norm)
+        covar = _kronecker_covar(disp * sqrt_w, covar_norm)
 
         # Compute precision matrix and log pseudo-determinant
-        precision, lpdet = _torch_pseudo_inv(covar)
+        precision, lpdet = _pseudo_inv(covar)
 
         # Compute log-likelihood
         log_lik = -1.5 * lpdet
@@ -520,6 +520,10 @@ def torch_iterative_align_kronecker_weighted(
     if kabsch_iter == max_iter:
         print("Warning: ML alignment not completely converged")
 
+    # clear up memory
+    del disp, covar, weighted_avg
+    torch.cuda.empty_cache()
+
     # Return results
     return traj_tensor, avg, precision, lpdet
 
@@ -529,9 +533,9 @@ def torch_iterative_align_kronecker_weighted(
 # =========================
 
 if hasattr(torch, 'compile'):
-    #torch_align_rot_mat = torch.compile(torch_align_rot_mat)
-    torch_iterative_align_uniform = torch.compile(torch_iterative_align_uniform)
-    torch_iterative_align_uniform_weighted = torch.compile(torch_iterative_align_uniform_weighted)
-    torch_iterative_align_kronecker = torch.compile(torch_iterative_align_kronecker)
-    torch_iterative_align_kronecker_weighted = torch.compile(torch_iterative_align_kronecker_weighted)
+    #align_rot_mats = torch.compile(align_rot_mats)
+    maximum_likelihood_uniform_alignment = torch.compile(maximum_likelihood_uniform_alignment)
+    maximum_likelihood_uniform_alignment_frame_weighted = torch.compile(maximum_likelihood_uniform_alignment_frame_weighted)
+    maximum_likelihood_kronecker_alignment = torch.compile(maximum_likelihood_kronecker_alignment)
+    maximum_likelihood_kronecker_alignment_frame_weighted = torch.compile(maximum_likelihood_kronecker_alignment_frame_weighted)
 

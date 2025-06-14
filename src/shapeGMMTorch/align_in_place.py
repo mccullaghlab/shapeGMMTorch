@@ -238,7 +238,7 @@ def maximum_likelihood_uniform_alignment_in_place(
 
 
 @torch.no_grad()
-def maximum_likelihood_uniform_alignment_frame_weights_in_place(
+def maximum_likelihood_uniform_alignment_frame_weighted_in_place(
     traj_tensor: torch.Tensor,
     weight_tensor: torch.Tensor,
     ref_tensor: torch.Tensor = None,
@@ -540,8 +540,9 @@ def maximum_likelihood_kronecker_alignment_frame_weighted_in_place(
         print("Warning: ML alignment not completely converged")
     # clear up memory
     del disp, covar, weighted_avg
-    if device.type == "cuda":
-        torch.cuda.empty_cache()
+    torch.cuda.empty_cache()
+    #if device.type == "cuda":
+    #    torch.cuda.empty_cache()
     # Return results
     return avg, precision, lpdet
 
@@ -554,8 +555,8 @@ if hasattr(torch, 'compile'):
     #torch_align_rot_mat = torch.compile(torch_align_rot_mat)
     align_uniform_in_place = torch.compile(align_uniform_in_place)
     align_kronecker_in_place = torch.compile(align_kronecker_in_place)
-    maximum_likelihood_uniform_align_in_place = torch.compile(maximum_likelihood_uniform_align_in_place)
-    maximum_likelihood_uniform_align_frame_weighted_in_place = torch.compile(maximum_likelihood_uniform_align_frame_weighted_in_place)
-    maximum_likelihood_kronecker_align_in_place = torch.compile(maximum_likelihood_kronecker_align_in_place)
-    maximum_likelihood_kronecker_align_frame_weighted_in_place = torch.compile(maximum_likelihood_kronecker_align_frame_weighted_in_place)
+    maximum_likelihood_uniform_alignment_in_place = torch.compile(maximum_likelihood_uniform_alignment_in_place)
+    maximum_likelihood_uniform_alignment_frame_weighted_in_place = torch.compile(maximum_likelihood_uniform_alignment_frame_weighted_in_place)
+    maximum_likelihood_kronecker_alignment_in_place = torch.compile(maximum_likelihood_kronecker_alignment_in_place)
+    maximum_likelihood_kronecker_alignment_frame_weighted_in_place = torch.compile(maximum_likelihood_kronecker_alignment_frame_weighted_in_place)
 

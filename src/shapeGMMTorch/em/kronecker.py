@@ -3,10 +3,11 @@ import warnings
 warnings.filterwarnings('ignore')
 import random
 from .. import align_in_place
+from .. import align
 import torch
 
 @torch.no_grad()
-def torch_sgmm_kronecker_em(
+def sgmm_kronecker_em(
     traj_tensor: torch.Tensor,
     frame_weights_tensor: torch.Tensor,
     means_tensor: torch.Tensor,
@@ -54,7 +55,7 @@ def torch_sgmm_kronecker_em(
     n_clusters = ln_weights_tensor.shape[0]
 
     # Expectation step: Compute log-likelihoods
-    cluster_frame_ln_likelihoods_tensor = torch_sgmm_expectation_kronecker(
+    cluster_frame_ln_likelihoods_tensor = sgmm_expectation_kronecker(
         traj_tensor, means_tensor, precisions_tensor, lpdets_tensor
     )
 
@@ -98,7 +99,7 @@ def torch_sgmm_kronecker_em(
                 ref_precision_tensor=precisions_tensor[k],
                 thresh=thresh,
                 max_iter=max_iter
-            )
+                )
             means_tensor[k].copy_(new_mean)
             precisions_tensor[k].copy_(new_precision)
             lpdets_tensor[k].copy_(new_lpdet)
@@ -107,7 +108,7 @@ def torch_sgmm_kronecker_em(
 
 
 @torch.no_grad()
-def torch_sgmm_expectation_kronecker(
+def sgmm_expectation_kronecker(
     traj_tensor: torch.Tensor, 
     means_tensor: torch.Tensor, 
     precisions_tensor: torch.Tensor, 
@@ -145,10 +146,11 @@ def torch_sgmm_expectation_kronecker(
 
     for k in range(n_clusters):
         # Align to the mean of each cluster using in place operation
-        align_in_place.align_kronecker_in_place(traj_tensor, means_tensor[k], precisions_tensor[k])
+        aligned_traj = align.align_kronecker(traj_tensor, means_tensor[k], precisions_tensor[k])
 
         # Displacement tensor
         disp = aligned_traj - means_tensor[k]  # (n_frames, n_atoms, 3) 
+        # compute Kronecker quadratic form as sum over x, y, z quadratic forms
         quad = 0.0
         for d in range(3):  # x, y, z
             v = disp[:,:,d].to(torch.float64)  # promote just 2D slice
