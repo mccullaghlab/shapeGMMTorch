@@ -10,7 +10,7 @@ from .align import (
     maximum_likelihood_kronecker_alignment_frame_weighted,
     maximum_likelihood_uniform_alignment_frame_weighted,    
 )
-from .generation import gen_mv, generate, cluster_ids_from_rand
+from .generation import gen_mv, generate, component_ids_from_rand
 
 __all__ = [
     "ShapeGMM",

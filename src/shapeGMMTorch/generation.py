@@ -1,13 +1,13 @@
 import numpy as np
 
-def cluster_ids_from_rand(random_nums,weights):
+def component_ids_from_rand(random_nums,weights):
     running_sum = 0.0
-    cluster_ids = np.empty(random_nums.size,dtype=np.int32)
-    for cluster_count, weight in enumerate(weights):
-        cluster_ids[np.argwhere((random_nums > running_sum) &
-                                (random_nums < running_sum + weight)).flatten()] = cluster_count
+    component_ids = np.empty(random_nums.size,dtype=np.int32)
+    for component_count, weight in enumerate(weights):
+        component_ids[np.argwhere((random_nums > running_sum) &
+                                (random_nums < running_sum + weight)).flatten()] = component_count
         running_sum += weight
-    return cluster_ids
+    return component_ids
 
 def gen_mv(mean, prec, n_samples=10000):
     # meta data
@@ -38,9 +38,9 @@ def cov_from_prec(prec):
     return np.kron(covN,np.identity(3))
 
 def generate(sgmm,n_frames):
-    cluster_ids = cluster_ids_from_rand(np.random.rand(n_frames),sgmm.weights)
+    component_ids = component_ids_from_rand(np.random.rand(n_frames),sgmm.weights)
     trj = np.empty((n_frames,sgmm.n_atoms,3))
-    for cluster_id in range(sgmm.n_clusters):
-        indeces = np.argwhere(cluster_ids == cluster_id).flatten()
-        trj[indeces] = gen_mv(sgmm.centers[cluster_id],sgmm.precisions[cluster_id],indeces.size)
+    for component_id in range(sgmm.n_components):
+        indeces = np.argwhere(component_ids == component_id).flatten()
+        trj[indeces] = gen_mv(sgmm.centers[component_id],sgmm.precisions[component_id],indeces.size)
     return trj

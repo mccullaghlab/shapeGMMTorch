@@ -109,6 +109,7 @@ class ShapeGMM:
         self._init_components_flag = False
         self._is_fitted = False
         self.random_seed = random_seed
+        self.__version__ = 2.0
 
         if random_seed is not None:
             np.random.seed(random_seed)
@@ -385,11 +386,11 @@ class ShapeGMM:
         trj = np.empty((n_frames,self.n_atoms,3))
         for component_id in range(self.n_components):
             if self.covar_type == "kronecker":
-                precision = self.precisions[component_id]
+                precision = self.precisions_[component_id]
             else:
-                precision = 1/self.vars[component_id] * np.identity(self.n_atoms)
+                precision = 1/self.vars_[component_id] * np.identity(self.n_atoms)
                 # now enforece that constant vector is in null space of precision
-                wsum = -1/self.vars[component_id]/(self.n_atoms-1)
+                wsum = -1/self.vars_[component_id]/(self.n_atoms-1)
                 for i in range(self.n_atoms):
                     for j in range(self.n_atoms):
                         if i != j:
@@ -407,7 +408,7 @@ class ShapeGMM:
             sorted_component_ids = component_ids[sort_key]
             new_components = np.empty(self.n_train_frames,dtype=int)
             for frame in range(self.n_train_frames):
-                new_components[frame] = np.argwhere(sorted_component_ids == self.component_ids[frame])
+                new_components[frame] = np.argwhere(sorted_component_ids == self.component_ids[frame]).item()
             # repopulate object
             self.means_   = self.means_[sort_key]
             self.weights_    = self.weights_[sort_key]
