@@ -34,9 +34,9 @@ def kl_divergence(sgmmP, sgmmQ, n_points):
     sterr(lnP - lnQ)  : (float) standard error of sampled KL divergence
     """
     trj = sgmmP.generate(n_points)
-    lnP = sgmmP.predict(trj)[2]  # LL per frame 
-    lnQ = sgmmQ.predict(trj)[2]  # LL per frame
-    return lnP - lnQ, stats.sem(sgmmP.predict_frame_log_likelihood-sgmmQ.predict_frame_log_likelihood)
+    lnP = sgmmP.score(trj)  # LL per frame 
+    lnQ = sgmmQ.score(trj)  # LL per frame
+    return lnP - lnQ, stats.sem(sgmmP.lnpdf(trj)-sgmmQ.lnpdf(trj))
 
 def js_divergence(sgmmP, sgmmQ, n_points):
     """
@@ -52,13 +52,13 @@ def js_divergence(sgmmP, sgmmQ, n_points):
     sterr(js)  : (float) propagated error of sampled JS divergence
     """
     # create new M object that is 0.5(Q+P)
-    sgmmM = ShapeGMM(sgmmP.n_clusters+sgmmQ.n_clusters,covar_type="kronecker",device=torch.device("cpu"),dtype=torch.float64)
-    sgmmM.weights = 0.5*np.append(sgmmP.weights,sgmmQ.weights)
-    sgmmM.centers = np.concatenate((sgmmP.centers,sgmmQ.centers))
-    sgmmM.precisions = np.concatenate((sgmmP.precisions,sgmmQ.precisions))
-    sgmmM.lpdets = np.concatenate((sgmmP.lpdets,sgmmQ.lpdets))
+    sgmmM = ShapeGMM(sgmmP.n_components+sgmmQ.n_components,covar_type="kronecker",device=torch.device("cpu"),dtype=torch.float64)
+    sgmmM.weights_ = 0.5*np.append(sgmmP.weights_,sgmmQ.weights_)
+    sgmmM.means_ = np.concatenate((sgmmP.means_,sgmmQ.means_))
+    sgmmM.precisions_ = np.concatenate((sgmmP.precisions_,sgmmQ.precisions_))
+    sgmmM.lpdets_ = np.concatenate((sgmmP.lpdets_,sgmmQ.lpdets_))
     sgmmM.n_atoms = sgmmP.n_atoms
-    sgmmM._gmm_fit_flag = True
+    sgmmM.is_fitted_ = True
     # now measure Kullback Leibler from M to P (or D(P||M))
     kl_P_M, kl_P_M_e  = kl_divergence(sgmmP,sgmmM,n_points)
     # now measure Kullback Leibler from M to Q (or D(Q||M))
@@ -79,8 +79,8 @@ def configurational_entropy(sgmmP, n_points):
     """
     # sample the object and compute probabilities of each sampled point
     trj = sgmmP.generate(n_points)
-    lnP = sgmmP.predict(trj)[2]
-    return -lnP, stats.sem(sgmmP.predict_frame_log_likelihood)
+    lnP = sgmmP.score(trj)
+    return -lnP, stats.sem(sgmmP.lnpdf(trj))
 
 def _pinv(sigma):
     e, v = np.linalg.eigh(sigma)
@@ -148,27 +148,27 @@ def _iterative_average_precision_weighted_kabsch(traj_data,precision,lpdet,thres
         step += 1
     return aligned_pos
 
-def bhattacharyya_distance(sgmm1,cluster_id1,sgmm2,cluster_id2):
+def bhattacharyya_distance(sgmm1,component_id1,sgmm2,component_id2):
     """
     Compute the Bhattacharya distance between two multivariate Gaussians
 
     sgmm1       : first shapeGMM object
-    cluster_id1 : cluster id of MV Gaussian in first shapeGMM object
+    component_id1 : component id of MV Gaussian in first shapeGMM object
     sgmm2       : second shapeGMM object
-    cluster_id2 : cluster id of MV Gaussian in second shapeGMM object
+    component_id2 : component id of MV Gaussian in second shapeGMM object
 
     returns:
     D           : (float) Bhattacharya distance
     """
-    sigma = 0.5*(_pinv(sgmm1.precisions[cluster_id1]) + _pinv(sgmm2.precisions[cluster_id2]))
+    sigma = 0.5*(_pinv(sgmm1.precisions_[component_id1]) + _pinv(sgmm2.precisions_[component_id2]))
     prec, lnpdet = _pinv_lnpdet(sigma)
     traj = np.empty((2,sgmm1.n_atoms,3))
-    traj[0] = sgmm1.centers[cluster_id1]
-    traj[1] = sgmm2.centers[cluster_id2]
+    traj[0] = sgmm1.means_[component_id1]
+    traj[1] = sgmm2.means_[component_id2]
     traj = _iterative_average_precision_weighted_kabsch(traj,prec,lnpdet)
     D = maha_dist2(traj[0],traj[1],prec)
     D /= 8
     D += 0.5*lnpdet
-    D -= 0.25 * (sgmm1.lpdets[cluster_id1] + sgmm2.lpdets[cluster_id2])
+    D -= 0.25 * (sgmm1.lpdets_[component_id1] + sgmm2.lpdets_[component_id2])
     return D
 

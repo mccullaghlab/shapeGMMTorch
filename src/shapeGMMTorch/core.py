@@ -342,6 +342,26 @@ class ShapeGMM:
         frame_log_lik = torch.logsumexp(component_ln_lik, dim=1).cpu().numpy()
         return np.sum(frame_weights * frame_log_lik)
 
+    def lnpdf(self, traj_data: np.ndarray) -> np.ndarray:
+        """
+        Compute the ln of the Probability for each frame in the fitted model
+
+        Parameters
+        ----------
+        traj_data : np.ndarray
+            (n_frames, n_atoms, 3) input trajectory data.
+
+        Returns
+        -------
+        lnpdf : np.ndarry
+            (n_frames,) array of ln probability of that frame in the current model
+        """
+        if not self.is_fitted_:
+            raise RuntimeError("ShapeGMM must be fit before calling score().")
+
+        component_ln_lik = self._compute_log_likelihoods(traj_data)
+        return torch.logsumexp(component_ln_lik, dim=1).cpu().numpy()
+
     def predict_proba(self, traj_data: np.ndarray) -> np.ndarray:
         """
         Compute the posterior probabilities (responsibilities) for each frame and component.
