@@ -168,7 +168,7 @@ class ShapeGMM:
         align_in_place.remove_center_of_geometry_in_place(traj_tensor)
 
         if not self._init_components_flag:
-            self.component_ids = self._init_components(traj_tensor, component_ids)
+            component_ids = self._init_components(traj_tensor, component_ids)
 
         if frame_weights is None:
             self._verbose_print("Setting uniform frame weights.")
@@ -180,8 +180,8 @@ class ShapeGMM:
         frame_weights_tensor = torch.tensor(self.train_frame_weights, dtype=torch.float64, device=self.device)
 
         means_tensor = torch.empty((self.n_components, self.n_atoms, self.n_dim), dtype=self.dtype, device=self.device)
-        self.weights = np.bincount(self.component_ids, minlength=self.n_components) / self.n_train_frames
-        ln_weights_tensor = torch.log(torch.tensor(self.weights, dtype=torch.float64, device=self.device))
+        self.weights_ = np.bincount(component_ids, minlength=self.n_components) / self.n_train_frames
+        ln_weights_tensor = torch.log(torch.tensor(self.weights_, dtype=torch.float64, device=self.device))
 
         if self.covar_type == "uniform":
             vars_tensor = torch.empty(self.n_components, dtype=torch.float64, device=self.device)
@@ -194,7 +194,7 @@ class ShapeGMM:
             em_args = (traj_tensor, frame_weights_tensor, means_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor)
 
         for k in range(self.n_components):
-            indices = np.argwhere(self.component_ids == k).flatten()
+            indices = np.argwhere(component_ids == k).flatten()
             if indices.ndim == 0 or indices.shape == ():  # Handle n_components=1
                 indices = indices.reshape(1)
             if self.covar_type == "uniform":
@@ -211,7 +211,7 @@ class ShapeGMM:
                 precisions_tensor[k].copy_(precision)
                 lpdets_tensor[k].copy_(lpdet)
 
-        self._verbose_print("Initial component weights:", self.weights)
+        self._verbose_print("Initial component weights:", self.weights_)
 
 
         delta_log_lik = self.log_thresh + 100.0
@@ -423,12 +423,7 @@ class ShapeGMM:
     def _sort_object(self):
         if self.is_fitted_ == True:
             # determine sort key
-            sort_key = np.argsort(self.weights)[::-1]
-            component_ids = np.arange(self.n_components).astype(int)
-            sorted_component_ids = component_ids[sort_key]
-            new_components = np.empty(self.n_train_frames,dtype=int)
-            for frame in range(self.n_train_frames):
-                new_components[frame] = np.argwhere(sorted_component_ids == self.component_ids[frame]).item()
+            sort_key = np.argsort(self.weights_)[::-1]
             # repopulate object
             self.means_   = self.means_[sort_key]
             self.weights_    = self.weights_[sort_key]
