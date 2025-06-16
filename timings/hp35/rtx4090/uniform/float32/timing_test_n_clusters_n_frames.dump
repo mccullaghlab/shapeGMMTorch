@@ -1,0 +1,309 @@
+nohup: ignoring input
+
+class GraphModule(torch.nn.Module):
+    def forward(self, L_args_0_: "f32[30521, 105, 3][315, 3, 1]cuda:0", L_args_1_: "f64[30521][1]cuda:0"):
+        l_args_0_ = L_args_0_
+        l_args_1_ = L_args_1_
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:291 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: avg = traj_tensor[0]
+        avg: "f32[105, 3][3, 1]cuda:0" = l_args_0_[0]
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:296 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor.to(dtype)
+        weight_tensor: "f32[30521][1]cuda:0" = l_args_1_.to(torch.float32);  l_args_1_ = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:297 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor / weight_tensor.sum()
+        sum_1: "f32[][]cuda:0" = weight_tensor.sum()
+        weight_tensor_1: "f32[30521][1]cuda:0" = weight_tensor / sum_1;  weight_tensor = sum_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:16 in align_rot_mats, code: c_mats = torch.matmul(ref_tensor.T,traj_tensor)
+        getattr_1: "f32[3, 105][1, 3]cuda:0" = avg.T;  avg = None
+        c_mats: "f32[30521, 3, 3][9, 3, 1]cuda:0" = torch.matmul(getattr_1, l_args_0_);  getattr_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:18 in align_rot_mats, code: u, s, v = torch.linalg.svd(c_mats)
+        linalg_svd = torch._C._linalg.linalg_svd(c_mats);  c_mats = None
+        u: "f32[30521, 3, 3][9, 1, 3]cuda:0" = linalg_svd[0]
+        s: "f32[30521, 3][3, 1]cuda:0" = linalg_svd[1];  s = None
+        v: "f32[30521, 3, 3][9, 3, 1]cuda:0" = linalg_svd[2];  linalg_svd = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:20 in align_rot_mats, code: prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
+        linalg_det: "f32[30521][1]cuda:0" = torch._C._linalg.linalg_det(u)
+        linalg_det_1: "f32[30521][1]cuda:0" = torch._C._linalg.linalg_det(v)
+        prod_dets: "f32[30521][1]cuda:0" = linalg_det * linalg_det_1;  linalg_det = linalg_det_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:21 in align_rot_mats, code: u[:,:,-1] *= prod_dets.unsqueeze(-1)
+        getitem_4: "f32[30521, 3][9, 1]cuda:0" = u[(slice(None, None, None), slice(None, None, None), -1)]
+        unsqueeze: "f32[30521, 1][1, 1]cuda:0" = prod_dets.unsqueeze(-1);  prod_dets = None
+        getitem_4 *= unsqueeze;  imul: "f32[30521, 3][9, 1]cuda:0" = getitem_4;  getitem_4 = unsqueeze = None
+        u[(slice(None, None, None), slice(None, None, None), -1)] = imul;  setitem = u;  imul = setitem = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:23 in align_rot_mats, code: rot_mat = torch.matmul(u,v).transpose(1,2)
+        matmul_1: "f32[30521, 3, 3][9, 3, 1]cuda:0" = torch.matmul(u, v);  u = v = None
+        rot_mat: "f32[30521, 3, 3][9, 1, 3]cuda:0" = matmul_1.transpose(1, 2);  matmul_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:26 in align_rot_mats, code: torch.cuda.empty_cache()
+        empty_cache = torch.cuda.memory.empty_cache();  empty_cache = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:312 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: traj_tensor[...] = torch.matmul(traj_tensor, rot_mat)
+        matmul_2: "f32[30521, 105, 3][315, 3, 1]cuda:0" = torch.matmul(l_args_0_, rot_mat);  rot_mat = None
+        l_args_0_[Ellipsis] = matmul_2;  setitem_1 = l_args_0_;  matmul_2 = setitem_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:315 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: avg = torch.einsum('ijk,i->jk', traj_tensor, weight_tensor)  # weighted average
+        avg_1: "f32[105, 3][3, 1]cuda:0" = torch.functional.einsum('ijk,i->jk', l_args_0_, weight_tensor_1)
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:318 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: disp = (traj_tensor - avg).to(torch.float64)
+        sub: "f32[30521, 105, 3][315, 3, 1]cuda:0" = l_args_0_ - avg_1;  l_args_0_ = avg_1 = None
+        disp: "f64[30521, 105, 3][315, 3, 1]cuda:0" = sub.to(torch.float64);  sub = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:321 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: disp_squared = torch.sum(disp ** 2, dim=(1, 2))  # (n_frames,)
+        pow_1: "f64[30521, 105, 3][315, 3, 1]cuda:0" = disp ** 2;  disp = None
+        disp_squared: "f64[30521][1]cuda:0" = torch.sum(pow_1, dim = (1, 2));  pow_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:322 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: var = torch.dot(disp_squared.to(dtype), weight_tensor) * var_norm
+        to_2: "f32[30521][1]cuda:0" = disp_squared.to(torch.float32);  disp_squared = None
+        dot: "f32[][]cuda:0" = torch.dot(to_2, weight_tensor_1);  to_2 = weight_tensor_1 = None
+        var: "f32[][]cuda:0" = dot * 0.003205128205128205;  dot = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:325 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: log_lik = log_lik_prefactor * (torch.log(var) + 1.0)
+        log: "f32[][]cuda:0" = torch.log(var);  var = None
+        add: "f32[][]cuda:0" = log + 1.0;  log = None
+        log_lik: "f32[][]cuda:0" = -156.0 * add;  add = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:327 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: delta_log_lik = torch.abs(log_lik - old_log_lik)
+        sub_1: "f32[][]cuda:0" = log_lik - 0.0;  log_lik = None
+        delta_log_lik: "f32[][]cuda:0" = torch.abs(sub_1);  sub_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:307 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: while delta_log_lik > thresh and kabsch_iter < max_iter:
+        gt: "b8[][]cuda:0" = delta_log_lik > 0.1;  delta_log_lik = gt = None
+        
+
+class GraphModule(torch.nn.Module):
+    def forward(self, L_args_0_: "f32[30521, 105, 3][315, 3, 1]cuda:0", L_args_1_: "f64[30521][1]cuda:0"):
+        l_args_0_ = L_args_0_
+        l_args_1_ = L_args_1_
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:291 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: avg = traj_tensor[0]
+        avg: "f32[105, 3][3, 1]cuda:0" = l_args_0_[0]
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:296 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor.to(dtype)
+        weight_tensor: "f32[30521][1]cuda:0" = l_args_1_.to(torch.float32);  l_args_1_ = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:297 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor / weight_tensor.sum()
+        sum_1: "f32[][]cuda:0" = weight_tensor.sum()
+        weight_tensor_1: "f32[30521][1]cuda:0" = weight_tensor / sum_1;  weight_tensor = sum_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:16 in align_rot_mats, code: c_mats = torch.matmul(ref_tensor.T,traj_tensor)
+        getattr_1: "f32[3, 105][1, 3]cuda:0" = avg.T;  avg = None
+        c_mats: "f32[30521, 3, 3][9, 3, 1]cuda:0" = torch.matmul(getattr_1, l_args_0_);  getattr_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:18 in align_rot_mats, code: u, s, v = torch.linalg.svd(c_mats)
+        linalg_svd = torch._C._linalg.linalg_svd(c_mats);  c_mats = None
+        u: "f32[30521, 3, 3][9, 1, 3]cuda:0" = linalg_svd[0]
+        s: "f32[30521, 3][3, 1]cuda:0" = linalg_svd[1];  s = None
+        v: "f32[30521, 3, 3][9, 3, 1]cuda:0" = linalg_svd[2];  linalg_svd = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:20 in align_rot_mats, code: prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
+        linalg_det: "f32[30521][1]cuda:0" = torch._C._linalg.linalg_det(u)
+        linalg_det_1: "f32[30521][1]cuda:0" = torch._C._linalg.linalg_det(v)
+        prod_dets: "f32[30521][1]cuda:0" = linalg_det * linalg_det_1;  linalg_det = linalg_det_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:21 in align_rot_mats, code: u[:,:,-1] *= prod_dets.unsqueeze(-1)
+        getitem_4: "f32[30521, 3][9, 1]cuda:0" = u[(slice(None, None, None), slice(None, None, None), -1)]
+        unsqueeze: "f32[30521, 1][1, 1]cuda:0" = prod_dets.unsqueeze(-1);  prod_dets = None
+        getitem_4 *= unsqueeze;  imul: "f32[30521, 3][9, 1]cuda:0" = getitem_4;  getitem_4 = unsqueeze = None
+        u[(slice(None, None, None), slice(None, None, None), -1)] = imul;  setitem = u;  imul = setitem = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:23 in align_rot_mats, code: rot_mat = torch.matmul(u,v).transpose(1,2)
+        matmul_1: "f32[30521, 3, 3][9, 3, 1]cuda:0" = torch.matmul(u, v);  u = v = None
+        rot_mat: "f32[30521, 3, 3][9, 1, 3]cuda:0" = matmul_1.transpose(1, 2);  matmul_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:26 in align_rot_mats, code: torch.cuda.empty_cache()
+        empty_cache = torch.cuda.memory.empty_cache();  empty_cache = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:312 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: traj_tensor[...] = torch.matmul(traj_tensor, rot_mat)
+        matmul_2: "f32[30521, 105, 3][315, 3, 1]cuda:0" = torch.matmul(l_args_0_, rot_mat);  rot_mat = None
+        l_args_0_[Ellipsis] = matmul_2;  setitem_1 = l_args_0_;  matmul_2 = setitem_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:315 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: avg = torch.einsum('ijk,i->jk', traj_tensor, weight_tensor)  # weighted average
+        avg_1: "f32[105, 3][3, 1]cuda:0" = torch.functional.einsum('ijk,i->jk', l_args_0_, weight_tensor_1)
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:318 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: disp = (traj_tensor - avg).to(torch.float64)
+        sub: "f32[30521, 105, 3][315, 3, 1]cuda:0" = l_args_0_ - avg_1;  l_args_0_ = avg_1 = None
+        disp: "f64[30521, 105, 3][315, 3, 1]cuda:0" = sub.to(torch.float64);  sub = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:321 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: disp_squared = torch.sum(disp ** 2, dim=(1, 2))  # (n_frames,)
+        pow_1: "f64[30521, 105, 3][315, 3, 1]cuda:0" = disp ** 2;  disp = None
+        disp_squared: "f64[30521][1]cuda:0" = torch.sum(pow_1, dim = (1, 2));  pow_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:322 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: var = torch.dot(disp_squared.to(dtype), weight_tensor) * var_norm
+        to_2: "f32[30521][1]cuda:0" = disp_squared.to(torch.float32);  disp_squared = None
+        dot: "f32[][]cuda:0" = torch.dot(to_2, weight_tensor_1);  to_2 = weight_tensor_1 = None
+        var: "f32[][]cuda:0" = dot * 0.003205128205128205;  dot = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:325 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: log_lik = log_lik_prefactor * (torch.log(var) + 1.0)
+        log: "f32[][]cuda:0" = torch.log(var);  var = None
+        add: "f32[][]cuda:0" = log + 1.0;  log = None
+        log_lik: "f32[][]cuda:0" = -156.0 * add;  add = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:327 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: delta_log_lik = torch.abs(log_lik - old_log_lik)
+        sub_1: "f32[][]cuda:0" = log_lik - 0.0;  log_lik = None
+        delta_log_lik: "f32[][]cuda:0" = torch.abs(sub_1);  sub_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:307 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: while delta_log_lik > thresh and kabsch_iter < max_iter:
+        gt: "b8[][]cuda:0" = delta_log_lik > 0.1;  delta_log_lik = gt = None
+        
+
+class GraphModule(torch.nn.Module):
+    def forward(self, L_args_0_: "f32[30521, 105, 3][315, 3, 1]cuda:0", L_args_1_: "f32[30521][1]cuda:0", L_kwargs_ref_tensor_: "f32[105, 3][3, 1]cuda:0"):
+        l_args_0_ = L_args_0_
+        l_args_1_ = L_args_1_
+        l_kwargs_ref_tensor_ = L_kwargs_ref_tensor_
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:296 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor.to(dtype)
+        weight_tensor: "f32[30521][1]cuda:0" = l_args_1_.to(torch.float32);  l_args_1_ = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:297 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor / weight_tensor.sum()
+        sum_1: "f32[][]cuda:0" = weight_tensor.sum()
+        weight_tensor_1: "f32[30521][1]cuda:0" = weight_tensor / sum_1;  weight_tensor = sum_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:16 in align_rot_mats, code: c_mats = torch.matmul(ref_tensor.T,traj_tensor)
+        getattr_1: "f32[3, 105][1, 3]cuda:0" = l_kwargs_ref_tensor_.T;  l_kwargs_ref_tensor_ = None
+        c_mats: "f32[30521, 3, 3][9, 3, 1]cuda:0" = torch.matmul(getattr_1, l_args_0_);  getattr_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:18 in align_rot_mats, code: u, s, v = torch.linalg.svd(c_mats)
+        linalg_svd = torch._C._linalg.linalg_svd(c_mats);  c_mats = None
+        u: "f32[30521, 3, 3][9, 1, 3]cuda:0" = linalg_svd[0]
+        s: "f32[30521, 3][3, 1]cuda:0" = linalg_svd[1];  s = None
+        v: "f32[30521, 3, 3][9, 3, 1]cuda:0" = linalg_svd[2];  linalg_svd = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:20 in align_rot_mats, code: prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
+        linalg_det: "f32[30521][1]cuda:0" = torch._C._linalg.linalg_det(u)
+        linalg_det_1: "f32[30521][1]cuda:0" = torch._C._linalg.linalg_det(v)
+        prod_dets: "f32[30521][1]cuda:0" = linalg_det * linalg_det_1;  linalg_det = linalg_det_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:21 in align_rot_mats, code: u[:,:,-1] *= prod_dets.unsqueeze(-1)
+        getitem_3: "f32[30521, 3][9, 1]cuda:0" = u[(slice(None, None, None), slice(None, None, None), -1)]
+        unsqueeze: "f32[30521, 1][1, 1]cuda:0" = prod_dets.unsqueeze(-1);  prod_dets = None
+        getitem_3 *= unsqueeze;  imul: "f32[30521, 3][9, 1]cuda:0" = getitem_3;  getitem_3 = unsqueeze = None
+        u[(slice(None, None, None), slice(None, None, None), -1)] = imul;  setitem = u;  imul = setitem = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:23 in align_rot_mats, code: rot_mat = torch.matmul(u,v).transpose(1,2)
+        matmul_1: "f32[30521, 3, 3][9, 3, 1]cuda:0" = torch.matmul(u, v);  u = v = None
+        rot_mat: "f32[30521, 3, 3][9, 1, 3]cuda:0" = matmul_1.transpose(1, 2);  matmul_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:26 in align_rot_mats, code: torch.cuda.empty_cache()
+        empty_cache = torch.cuda.memory.empty_cache();  empty_cache = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:312 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: traj_tensor[...] = torch.matmul(traj_tensor, rot_mat)
+        matmul_2: "f32[30521, 105, 3][315, 3, 1]cuda:0" = torch.matmul(l_args_0_, rot_mat);  rot_mat = None
+        l_args_0_[Ellipsis] = matmul_2;  setitem_1 = l_args_0_;  matmul_2 = setitem_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:315 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: avg = torch.einsum('ijk,i->jk', traj_tensor, weight_tensor)  # weighted average
+        avg: "f32[105, 3][3, 1]cuda:0" = torch.functional.einsum('ijk,i->jk', l_args_0_, weight_tensor_1)
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:318 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: disp = (traj_tensor - avg).to(torch.float64)
+        sub: "f32[30521, 105, 3][315, 3, 1]cuda:0" = l_args_0_ - avg;  l_args_0_ = avg = None
+        disp: "f64[30521, 105, 3][315, 3, 1]cuda:0" = sub.to(torch.float64);  sub = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:321 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: disp_squared = torch.sum(disp ** 2, dim=(1, 2))  # (n_frames,)
+        pow_1: "f64[30521, 105, 3][315, 3, 1]cuda:0" = disp ** 2;  disp = None
+        disp_squared: "f64[30521][1]cuda:0" = torch.sum(pow_1, dim = (1, 2));  pow_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:322 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: var = torch.dot(disp_squared.to(dtype), weight_tensor) * var_norm
+        to_2: "f32[30521][1]cuda:0" = disp_squared.to(torch.float32);  disp_squared = None
+        dot: "f32[][]cuda:0" = torch.dot(to_2, weight_tensor_1);  to_2 = weight_tensor_1 = None
+        var: "f32[][]cuda:0" = dot * 0.003205128205128205;  dot = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:325 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: log_lik = log_lik_prefactor * (torch.log(var) + 1.0)
+        log: "f32[][]cuda:0" = torch.log(var);  var = None
+        add: "f32[][]cuda:0" = log + 1.0;  log = None
+        log_lik: "f32[][]cuda:0" = -156.0 * add;  add = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:327 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: delta_log_lik = torch.abs(log_lik - old_log_lik)
+        sub_1: "f32[][]cuda:0" = log_lik - 0.0;  log_lik = None
+        delta_log_lik: "f32[][]cuda:0" = torch.abs(sub_1);  sub_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:307 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: while delta_log_lik > thresh and kabsch_iter < max_iter:
+        gt: "b8[][]cuda:0" = delta_log_lik > 0.1;  delta_log_lik = gt = None
+        
+
+class GraphModule(torch.nn.Module):
+    def forward(self, L_args_0_: "f32[30521, 105, 3][315, 3, 1]cuda:0", L_args_1_: "f32[30521][1]cuda:0", L_kwargs_ref_tensor_: "f32[105, 3][3, 1]cuda:0"):
+        l_args_0_ = L_args_0_
+        l_args_1_ = L_args_1_
+        l_kwargs_ref_tensor_ = L_kwargs_ref_tensor_
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:296 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor.to(dtype)
+        weight_tensor: "f32[30521][1]cuda:0" = l_args_1_.to(torch.float32);  l_args_1_ = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:297 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor / weight_tensor.sum()
+        sum_1: "f32[][]cuda:0" = weight_tensor.sum()
+        weight_tensor_1: "f32[30521][1]cuda:0" = weight_tensor / sum_1;  weight_tensor = sum_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:16 in align_rot_mats, code: c_mats = torch.matmul(ref_tensor.T,traj_tensor)
+        getattr_1: "f32[3, 105][1, 3]cuda:0" = l_kwargs_ref_tensor_.T;  l_kwargs_ref_tensor_ = None
+        c_mats: "f32[30521, 3, 3][9, 3, 1]cuda:0" = torch.matmul(getattr_1, l_args_0_);  getattr_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:18 in align_rot_mats, code: u, s, v = torch.linalg.svd(c_mats)
+        linalg_svd = torch._C._linalg.linalg_svd(c_mats);  c_mats = None
+        u: "f32[30521, 3, 3][9, 1, 3]cuda:0" = linalg_svd[0]
+        s: "f32[30521, 3][3, 1]cuda:0" = linalg_svd[1];  s = None
+        v: "f32[30521, 3, 3][9, 3, 1]cuda:0" = linalg_svd[2];  linalg_svd = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:20 in align_rot_mats, code: prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
+        linalg_det: "f32[30521][1]cuda:0" = torch._C._linalg.linalg_det(u)
+        linalg_det_1: "f32[30521][1]cuda:0" = torch._C._linalg.linalg_det(v)
+        prod_dets: "f32[30521][1]cuda:0" = linalg_det * linalg_det_1;  linalg_det = linalg_det_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:21 in align_rot_mats, code: u[:,:,-1] *= prod_dets.unsqueeze(-1)
+        getitem_3: "f32[30521, 3][9, 1]cuda:0" = u[(slice(None, None, None), slice(None, None, None), -1)]
+        unsqueeze: "f32[30521, 1][1, 1]cuda:0" = prod_dets.unsqueeze(-1);  prod_dets = None
+        getitem_3 *= unsqueeze;  imul: "f32[30521, 3][9, 1]cuda:0" = getitem_3;  getitem_3 = unsqueeze = None
+        u[(slice(None, None, None), slice(None, None, None), -1)] = imul;  setitem = u;  imul = setitem = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:23 in align_rot_mats, code: rot_mat = torch.matmul(u,v).transpose(1,2)
+        matmul_1: "f32[30521, 3, 3][9, 3, 1]cuda:0" = torch.matmul(u, v);  u = v = None
+        rot_mat: "f32[30521, 3, 3][9, 1, 3]cuda:0" = matmul_1.transpose(1, 2);  matmul_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:26 in align_rot_mats, code: torch.cuda.empty_cache()
+        empty_cache = torch.cuda.memory.empty_cache();  empty_cache = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:312 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: traj_tensor[...] = torch.matmul(traj_tensor, rot_mat)
+        matmul_2: "f32[30521, 105, 3][315, 3, 1]cuda:0" = torch.matmul(l_args_0_, rot_mat);  rot_mat = None
+        l_args_0_[Ellipsis] = matmul_2;  setitem_1 = l_args_0_;  matmul_2 = setitem_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:315 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: avg = torch.einsum('ijk,i->jk', traj_tensor, weight_tensor)  # weighted average
+        avg: "f32[105, 3][3, 1]cuda:0" = torch.functional.einsum('ijk,i->jk', l_args_0_, weight_tensor_1)
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:318 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: disp = (traj_tensor - avg).to(torch.float64)
+        sub: "f32[30521, 105, 3][315, 3, 1]cuda:0" = l_args_0_ - avg;  l_args_0_ = avg = None
+        disp: "f64[30521, 105, 3][315, 3, 1]cuda:0" = sub.to(torch.float64);  sub = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:321 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: disp_squared = torch.sum(disp ** 2, dim=(1, 2))  # (n_frames,)
+        pow_1: "f64[30521, 105, 3][315, 3, 1]cuda:0" = disp ** 2;  disp = None
+        disp_squared: "f64[30521][1]cuda:0" = torch.sum(pow_1, dim = (1, 2));  pow_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:322 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: var = torch.dot(disp_squared.to(dtype), weight_tensor) * var_norm
+        to_2: "f32[30521][1]cuda:0" = disp_squared.to(torch.float32);  disp_squared = None
+        dot: "f32[][]cuda:0" = torch.dot(to_2, weight_tensor_1);  to_2 = weight_tensor_1 = None
+        var: "f32[][]cuda:0" = dot * 0.003205128205128205;  dot = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:325 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: log_lik = log_lik_prefactor * (torch.log(var) + 1.0)
+        log: "f32[][]cuda:0" = torch.log(var);  var = None
+        add: "f32[][]cuda:0" = log + 1.0;  log = None
+        log_lik: "f32[][]cuda:0" = -156.0 * add;  add = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:327 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: delta_log_lik = torch.abs(log_lik - old_log_lik)
+        sub_1: "f32[][]cuda:0" = log_lik - 0.0;  log_lik = None
+        delta_log_lik: "f32[][]cuda:0" = torch.abs(sub_1);  sub_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:307 in maximum_likelihood_uniform_alignment_frame_weighted_in_place, code: while delta_log_lik > thresh and kabsch_iter < max_iter:
+        gt: "b8[][]cuda:0" = delta_log_lik > 0.1;  delta_log_lik = gt = None
+        
+2.7.0+cu126
+Number of frames: 305209
+Total number of atoms: 577
+Number of selected atoms: 105
+Frame array: [ 30520  61041 152604 305209]
+Component array: [1 2 3 4 5 6 7 8]
+Log thresh: 1e-15
+n_iter: 30

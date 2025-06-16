@@ -1,0 +1,9 @@
+nohup: ignoring input
+2.7.0+cu126
+Number of frames: 305209
+Total number of atoms: 577
+Number of selected atoms: 105
+Frame array: [ 30520  61041 152604 305209]
+Component array: [1 2 3 4 5 6 7 8]
+Log thresh: 1e-08
+n_iter: 30
