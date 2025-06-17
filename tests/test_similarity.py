@@ -7,7 +7,7 @@ device = torch.device("cpu")
 dtype = torch.float64
 n_frames = 100
 n_atoms = 4
-n_components = 3
+n_components = 2
 
 def test_maha_dist2():
     x1 = np.random.rand(10, 3)

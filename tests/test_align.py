@@ -12,10 +12,13 @@ from shapeGMMTorch.align import (
     maximum_likelihood_kronecker_alignment_frame_weighted
 )
 
+n_frames = 100
+n_atoms = 4
+
 @pytest.fixture
 def sample_trajectory():
     torch.manual_seed(0)
-    return torch.rand(10, 5, 3, dtype=torch.float32)
+    return torch.rand(n_frames, n_atoms, 3, dtype=torch.float32)
 
 def test_remove_center_of_geometry(sample_trajectory):
     centered = remove_center_of_geometry(sample_trajectory.clone())
@@ -25,7 +28,7 @@ def test_remove_center_of_geometry(sample_trajectory):
 def test_align_rot_mats(sample_trajectory):
     ref = sample_trajectory[0]
     rot_mats = align_rot_mats(sample_trajectory, ref)
-    assert rot_mats.shape == (10, 3, 3)
+    assert rot_mats.shape == (n_frames, 3, 3)
     identity = torch.bmm(rot_mats, rot_mats.transpose(1, 2))
     assert torch.allclose(identity, torch.eye(3).expand_as(identity), atol=1e-5)
 
@@ -35,40 +38,40 @@ def test_align_uniform(sample_trajectory):
 
 def test_align_kronecker(sample_trajectory):
     ref = sample_trajectory[0]
-    precision = torch.eye(5).to(dtype=torch.float64)
+    precision = torch.eye(n_atoms).to(dtype=torch.float64)
     aligned = align_kronecker(sample_trajectory.clone(), ref, precision)
     assert aligned.shape == sample_trajectory.shape
 
 def test_trajectory_sd(sample_trajectory):
     ref = sample_trajectory[0]
     sd = trajectory_sd(sample_trajectory.clone(), ref)
-    assert sd.shape == (10,)
+    assert sd.shape == (n_frames,)
     assert torch.all(sd >= 0)
 
 def test_maximum_likelihood_uniform_alignment(sample_trajectory):
     traj, avg, var = maximum_likelihood_uniform_alignment(sample_trajectory.clone())
     assert traj.shape == sample_trajectory.shape
-    assert avg.shape == (5, 3)
+    assert avg.shape == (n_atoms, 3)
     assert isinstance(var, torch.Tensor)
 
 def test_maximum_likelihood_uniform_alignment_frame_weighted(sample_trajectory):
-    weights = torch.ones(10)
+    weights = torch.ones(n_frames)
     traj, avg, var = maximum_likelihood_uniform_alignment_frame_weighted(sample_trajectory.clone(), weights)
     assert traj.shape == sample_trajectory.shape
-    assert avg.shape == (5, 3)
+    assert avg.shape == (n_atoms, 3)
     assert isinstance(var, torch.Tensor)
 
 def test_maximum_likelihood_kronecker_alignment(sample_trajectory):
     traj, avg, precision, lpdet = maximum_likelihood_kronecker_alignment(sample_trajectory.clone())
     assert traj.shape == sample_trajectory.shape
-    assert avg.shape == (5, 3)
-    assert precision.shape == (5, 5)
+    assert avg.shape == (n_atoms, 3)
+    assert precision.shape == (n_atoms, n_atoms)
     assert isinstance(lpdet, torch.Tensor)
 
 def test_maximum_likelihood_kronecker_alignment_frame_weighted(sample_trajectory):
-    weights = torch.ones(10)
+    weights = torch.ones(n_frames)
     traj, avg, precision, lpdet = maximum_likelihood_kronecker_alignment_frame_weighted(sample_trajectory.clone(), weights)
     assert traj.shape == sample_trajectory.shape
-    assert avg.shape == (5, 3)
-    assert precision.shape == (5, 5)
+    assert avg.shape == (n_atoms, 3)
+    assert precision.shape == (n_atoms, n_atoms)
     assert isinstance(lpdet, torch.Tensor)

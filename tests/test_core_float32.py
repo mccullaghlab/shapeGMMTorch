@@ -7,7 +7,7 @@ device = torch.device('cpu')
 dtype = torch.float32
 n_frames = 100
 n_atoms = 4
-n_components = 3
+n_components = 2
 
 def test_uniform_fit():
     covar_type = "uniform"
