@@ -139,9 +139,6 @@ kronecker model:
 
 After being properly fit, a shapeGMM object will have the following attributes:
 
-	- n_components	             - integer of how many clusters were used in training
-	- n_atoms                    - integer of how many atoms were in the training data
-	- n_train_frames             - integer of how many frames were in the training data
 	- weights_                   - (n_components) float array of cluster weights
 	- means_                     - (n_components, n_atoms, 3) float array of cluster centers/averages
 
@@ -154,4 +151,100 @@ Kronecker covariance specific attributes
 	- precisions_	   	         - (n_components, n_atoms, n_atoms) float array of component precisions (inverse covariances)
 	- lpdets_	    	         - (n_components) float array of ln(det(covar))
 
+## Fitting with multiple attempts
 
+Because the EM algortihm is prone to getting caught in local maxima, we suggest performing multiple fit attempts, with different random initializations, to help determine the optimal shapeGMM parameters.  We provide a srcipt to achieve this.
+
+
+```python
+from shapeGMMTorch.utils.io import sgmm_fit_with_attempts
+
+best_model = sgmm_fit_with_attempts(
+    traj_data=my_trajectory,         # shape: (n_frames, n_atoms, 3)
+    n_components=3,                  # number of clusters/components
+    n_attempts=10,                   # number of random restarts
+    covar_type="kronecker",         # or "uniform"
+    frame_weights=weights,          # optional: weighting frames by importance
+    init_component_method="kmeans++",  # initialization strategy
+    dtype=torch.float32,
+    device=torch.device("cuda:0"),  # use GPU if available
+    random_seed=42,
+    verbose=True
+)
+```
+
+### Parameters
+
+| Name                   | Description                                                                 |
+|------------------------|-----------------------------------------------------------------------------|
+| `traj_data`            | NumPy array of shape `(n_frames, n_atoms, 3)` containing trajectory data    |
+| `n_components`         | Number of Gaussian components (clusters)                                   |
+| `n_attempts`           | Number of fitting attempts with different initializations                   |
+| `covar_type`           | Covariance model: `"uniform"` or `"kronecker"`                              |
+| `frame_weights`        | Optional array of weights (per frame) for likelihood computation            |
+| `thresh`               | Log-likelihood convergence threshold (default `1e-3`)                       |
+| `kabsch_thresh`        | Threshold for maximum-likelihood alignment convergence (default `1e-1`)     |
+| `dtype`                | PyTorch tensor data type (e.g., `torch.float32` or `torch.float64`)         |
+| `device`               | PyTorch device (`"cpu"` or `"cuda:0"`)                                     |
+| `random_seed`          | Optional integer seed for reproducibility                                   |
+| `init_component_method`| Initialization method for component IDs:<br>• `'kmeans++'` (default)<br>• `'random'`<br>• `'chunk'`<br>• `'read'` |
+| `verbose`              | If `True`, print log-likelihood summary for each attempt                    |
+
+### Returns
+
+- The `ShapeGMM` instance corresponding to the **best fit** across all attempts (i.e., the highest final log-likelihood).
+
+
+## Cross-Validation for Model Selection
+
+`shapeGMMTorch` provides a utility function to perform cross-validation across a range of GMM component numbers to guide model selection.
+
+### `cross_validate_component_scan`
+
+```python
+from shapeGMMTorch.utils.validation import cross_validate_component_scan
+```
+
+This routine performs k-fold-style cross-validation to evaluate the model log-likelihood on both training and validation sets for multiple values of `n_components`.
+
+#### Parameters
+
+| Parameter              | Type                 | Description |
+|------------------------|----------------------|-------------|
+| `traj_data`            | `np.ndarray`         | Trajectory data of shape `(n_frames, n_atoms, 3)` |
+| `component_array`      | `np.ndarray`         | Array of integers specifying the number of components to scan, e.g. `[1, 2, 3, 4, 5]` |
+| `train_fraction`       | `float`              | Fraction of frames used for training (default: `0.9`) |
+| `frame_weights`        | `np.ndarray` or `list`, optional | Optional frame weights for likelihood weighting |
+| `thresh`               | `float`              | Log-likelihood convergence threshold (default: `1e-3`) |
+| `kabsch_thresh`        | `float`              | Convergence threshold for Kabsch alignment (default: `1e-1`) |
+| `covar_type`           | `str`                | Type of covariance (`'uniform'` or `'kronecker'`) |
+| `n_training_sets`      | `int`                | Number of random train/test splits (default: `3`) |
+| `n_attempts`           | `int`                | Number of ShapeGMM fitting attempts per split (default: `10`) |
+| `dtype`                | `torch.dtype`        | Tensor precision for PyTorch (default: `torch.float32`) |
+| `device`               | `torch.device`       | PyTorch device for computation (default: `"cuda:0"`) |
+| `init_component_method`| `str`                | Initialization method: `'kmeans++'`, `'random'`, `'chunk'`, or `'read'` |
+| `random_seed`          | `int`, optional      | Seed for reproducibility |
+| `verbose`              | `bool`               | Print timing/log-likelihood diagnostics (default: `True`) |
+
+#### Returns
+
+- `train_log_liks` – Log-likelihoods on training sets. Shape: `(len(component_array), n_training_sets)`
+- `cv_log_liks` – Log-likelihoods on validation sets. Shape: `(len(component_array), n_training_sets)`
+
+#### Example
+
+```python
+component_range = np.arange(1, 6)
+train_lls, cv_lls = cross_validate_component_scan(
+    traj_data=trajectory_array,
+    component_array=component_range,
+    covar_type="kronecker",
+    n_training_sets=5,
+    n_attempts=10,
+    init_component_method="kmeans++",
+    device=torch.device("cuda:0"),
+    dtype=torch.float64,
+)
+```
+
+You can then use the `train_lls` and `cv_lls` values to help guide the selection of the number component based on the elbow heuristic and deviation between training and cross-validation values.  
