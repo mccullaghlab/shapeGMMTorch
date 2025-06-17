@@ -1,5 +1,5 @@
 numpy
 scipy
 torch>=2.4
-MDAnalysis
+MDAnalysis==2.9.0
 matplotlib
