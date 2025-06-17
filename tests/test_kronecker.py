@@ -5,10 +5,10 @@ from shapeGMMTorch.em import kronecker as kr
 
 dtype = torch.float64
 device = torch.device('cpu')
+n_frames, n_atoms, n_components = 100, 4, 2
 
 def test_sgmm_kronecker_em_runs():
     torch.manual_seed(0)
-    n_frames, n_atoms, n_components = 10, 5, 2
     traj = torch.randn((n_frames, n_atoms, 3), dtype=torch.float32)
     weights = torch.ones(n_frames, dtype=torch.float32) / n_frames
     means = torch.randn((n_components, n_atoms, 3), dtype=torch.float32)
@@ -26,7 +26,6 @@ def test_sgmm_kronecker_em_runs():
 
 def test_sgmm_expectation_kronecker_shapes():
     torch.manual_seed(0)
-    n_frames, n_atoms, n_components = 8, 4, 3
     traj = torch.randn((n_frames, n_atoms, 3), dtype=torch.float32)
     means = torch.randn((n_components, n_atoms, 3), dtype=torch.float32)
     precisions = torch.stack([torch.eye(n_atoms,dtype=torch.float64) for _ in range(n_components)])
