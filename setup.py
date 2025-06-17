@@ -27,7 +27,7 @@ setuptools.setup(
     install_requires=[
         "numpy",
         "scipy",
-        "torch>=2.6",
+        "torch>=2.4",
         "MDAnalysis",
         "matplotlib",
     ],
