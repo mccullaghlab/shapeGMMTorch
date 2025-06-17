@@ -1,11 +1,16 @@
 import setuptools
+from pathlib import Path
+
+# Extract version from file
+version_file = Path(__file__).parent / "src" / "shapeGMMTorch" / "version.py"
+exec(version_file.read_text())
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="shapeGMMTorch",
-    version="2.0.0",
+    version=__version__,
     author="Martin McCullagh",
     author_email="martin.mccullagh@okstate.edu",
     description="Gaussian Mixture Model clustering in size-and-shape space using PyTorch",

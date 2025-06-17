@@ -1,7 +1,7 @@
 """
 shapeGMMTorch: A modular PyTorch library for GMM-based shape clustering.
 """
-
+from .version import __version__
 from .core import ShapeGMM
 from .align import (
     remove_center_of_geometry,
