@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, v2.0 ]
   pull_request:
     branches: [ main ]
 
@@ -24,7 +24,11 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install .[dev]
+        pip install -r requirements.txt
+        pip install pytest
+
+    - name: Set up PYTHONPATH
+      run: echo "PYTHONPATH=$PWD/src" >> $GITHUB_ENV
 
     - name: Run tests
       run: |
