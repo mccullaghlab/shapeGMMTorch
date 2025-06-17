@@ -1,6 +1,6 @@
 # shapeGMMTorch
 
-[![CI](https://github.com/mccullaghlab/shapeGMMTorch/actions/workflows/ci.yml/badge.svg)](https://github.com/mccullaghlab/shapeGMMTorch/actions/workflows/ci.yml)
+[![Python package](https://github.com/mccullaghlab/shapeGMMTorch/actions/workflows/python-package.yml/badge.svg)](https://github.com/mccullaghlab/shapeGMMTorch/actions/workflows/python-package.yml)
 [![PyPI version](https://img.shields.io/pypi/v/shapeGMMTorch.svg)](https://pypi.org/project/shapeGMMTorch/)
 [![Examples](https://img.shields.io/badge/examples-notebooks-blue.svg)](https://github.com/mccullaghlab/shapeGMMTorch/tree/main/examples)
 
