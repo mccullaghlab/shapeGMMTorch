@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "shapeGMMTorch"
 version = "2.0.0"
-description = "Gaussian Mixture Model clustering in shape space using PyTorch"
+description = "Gaussian Mixture Model clustering in size-and-shape space using PyTorch"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [
   { name = "Martin McCullagh", email = "martin.mccullagh@okstate.edu" }

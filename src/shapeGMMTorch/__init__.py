@@ -15,6 +15,7 @@ from .align import (
 from .generation import gen_mv, generate, component_ids_from_rand
 
 __all__ = [
+    "__version__",
     "ShapeGMM",
     "remove_center_of_geometry",
     "align_kronecker",
