@@ -52,7 +52,8 @@ During initialization, the following options are availble:
 	- covar_type              - string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'kronecker'.
 	- log_thresh              - float threshold in log likelihood difference to determine convergence. Default value is 1e-3.
 	- max_steps               - integer maximum number of steps that the GMM procedure will do.  Default is 200.
-	- init_component_method   - string dictating how to initialize components.  Understood values are 'chunk', 'read' and 'random'.  Default is 'random'.
+	- init_component_method   - string dictating how to initialize components.  Understood values are 'kmeans++', 'chunk', 'read' and 'random'.  Default is 'kmeans++'.
+	- random_seed             - integer setting the seed for numpy and torch random number generators.  If None, both are seeded by the clock.  Default is None.
 	- sort                    - boolean dictating whether to sort the object by component population after fitting.  Default is True.
 	- kabsch_thresh           - float dictating convergence criteria for each iterative alignment (Maximization step).  Default value is 1e-1.
 	- dtype                   - Torch data type to be used.  Default is torch.float32.
