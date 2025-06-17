@@ -28,10 +28,11 @@ class ShapeGMM:
         Default is 'uniform'.
     init_component_method : str, optional
         Method for initializing component assignments. Options include:
+        - 'kmeans++': Use kmeans++ style seeding.  Has an initial random component.
         - 'random': randomly assign frames to components.
         - 'chunk': assign frames in sequential blocks.
         - 'read': assume component_ids are provided externally.
-        Default is 'random'.
+        Default is 'kmeans++'.
     sort : bool, optional
         If True, components will be sorted by population after fitting. Default is True.
     kabsch_thresh : float, optional
@@ -86,7 +87,7 @@ class ShapeGMM:
         log_thresh: float = 1E-3,
         max_steps: int = 200,
         covar_type: str = "kronecker",
-        init_component_method: str = "random",
+        init_component_method: str = "kmeans++",
         sort: bool = True,
         kabsch_thresh: float = 1E-1,
         kabsch_max_steps: int = 500,
@@ -119,6 +120,41 @@ class ShapeGMM:
         if self.verbose:
             print(*args)
 
+    def _kmeans_pp_seeding(self, traj_tensor):
+        """
+        KMeans++-style initialization for molecular trajectories.
+
+        Parameters
+        ----------
+        traj_tensor : torch.tensor
+            Array of shape (n_frames, n_atoms, 3)
+
+        Returns
+        -------
+        component_ids : np.ndarray
+            Initial cluster assignment of shape (n_frames,)
+        """
+
+        rng = np.random.default_rng(self.random_seed if hasattr(self, "random_seed") else None)
+        n_frames = traj_tensor.shape[0]
+
+        # choose first frame
+        dists2 = torch.empty((n_frames,self.n_components), dtype=self.dtype, device=self.device)
+        dists2[:,0] = align_in_place.trajectory_sd(traj_tensor, traj_tensor[rng.choice(n_frames)])
+
+        for c in range(1, self.n_components):
+            # determine min distances
+            min_dists2 = torch.amin(dists2[:,:c],dim=1)
+
+            # probs
+            probs = min_dists2 / min_dists2.sum()
+            next_idx = torch.multinomial(probs, 1).item()
+            # compute new distances
+            dists2[:,c] = align_in_place.trajectory_sd(traj_tensor, traj_tensor[next_idx])
+
+        # assign frames to centers
+        return torch.argmin(dists2, dim=1).cpu().numpy()
+
     def _init_components(self, traj_tensor: torch.Tensor, component_ids: np.ndarray = None):
         self.n_train_frames = traj_tensor.shape[0]
         self.n_atoms = traj_tensor.shape[1]
@@ -130,6 +166,7 @@ class ShapeGMM:
         self._verbose_print(f"Data type (dtype)       : {self.dtype}")
         self._verbose_print(f"Device                  : {self.device}")
         self._verbose_print(f"Component init method   : {self.init_component_method}")
+        self._verbose_print(f"Random seed             : {self.random_seed}")
         self._verbose_print(f"Number of frames        : {self.n_train_frames}")
         self._verbose_print(f"Number of atoms         : {self.n_atoms}")
         self._verbose_print(f"Number of dimensions    : {self.n_dim}")
@@ -140,6 +177,8 @@ class ShapeGMM:
             component_ids = np.arange(self.n_train_frames) * self.n_components // self.n_train_frames
         elif self.init_component_method == "read" and component_ids is not None:
             component_ids = component_ids
+        elif self.init_component_method == "kmeans++":
+            component_ids = self._kmeans_pp_seeding(traj_tensor)
         else:
             if self.n_components > 1:
                 component_ids = np.random.choice(self.n_components, size=self.n_train_frames)

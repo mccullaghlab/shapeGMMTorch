@@ -10,7 +10,7 @@ from .. import align
 from .. import generation
 
 
-def cross_validate_component_scan(traj_data, component_array, train_fraction=0.9, frame_weights=None, thresh=1e-3, kabsch_thresh=1e-1, covar_type="kronecker", n_training_sets=3, n_attempts=10, dtype=torch.float32, device=torch.device("cuda:0"), verbose=True):
+def cross_validate_component_scan(traj_data, component_array, train_fraction=0.9, frame_weights=None, thresh=1e-3, kabsch_thresh=1e-1, covar_type="kronecker", n_training_sets=3, n_attempts=10, dtype=torch.float32, device=torch.device("cuda:0"), init_component_method = "kmeans++", random_seed=None, verbose=True):
     """
     Perform cross-validation for ShapeGMM over a range of number of components.
 
@@ -38,6 +38,15 @@ def cross_validate_component_scan(traj_data, component_array, train_fraction=0.9
         Data type for torch tensors.
     device : torch.device
         Device on which computation will run.
+    random_seed : int, optional
+        Seed for random number generation (NumPy). If provided, ensures reproducibility.
+    init_component_method : str, optional
+        Method for initializing component assignments. Options include:
+        - 'kmeans++': Use kmeans++ style seeding.  Has an initial random component.
+        - 'random': randomly assign frames to components.
+        - 'chunk': assign frames in sequential blocks.
+        - 'read': assume component_ids are provided externally.
+        Default is 'kmeans++'.
     verbose : bool
         Whether to print progress and timing information.
 
@@ -48,6 +57,9 @@ def cross_validate_component_scan(traj_data, component_array, train_fraction=0.9
     cv_log_liks : np.ndarray
         Log-likelihoods on validation sets. Shape (len(component_array), n_training_sets)
     """
+    if random_seed is None:
+        random_seed = 1234
+        np.random.seed(random_seed)
     n_frames = traj_data.shape[0]
     n_atoms = traj_data.shape[1]
     assert 0.0 < train_fraction < 1.0, "train_fraction must be between 0 and 1 (exclusive)."
@@ -63,6 +75,8 @@ def cross_validate_component_scan(traj_data, component_array, train_fraction=0.9
         print("Number of training sets:", n_training_sets)
         print("Number of attempts per set/component:", n_attempts)
         print("Component array:", component_array)
+        print(f"Init Component Method   : {init_component_method}")
+        print(f"Random seed             : {random_seed}")
         print("%15s %15s %15s %19s %15s" % ("Training Set", "N Components", "Attempt", "Log Like per Frame", "Wallclock Time (s)"))
         print("%84s" % ("-" * 90))
         sys.stdout.flush()
@@ -94,7 +108,8 @@ def cross_validate_component_scan(traj_data, component_array, train_fraction=0.9
                     dtype=dtype,
                     device=device,
                     kabsch_thresh=kabsch_thresh,
-                    random_seed=1234 + attempt*11,
+                    init_component_method = init_component_method,
+                    random_seed=random_seed + attempt*121,
                     verbose=False
                 )
                 model.fit(traj_train, frame_weights=weights_train)
@@ -115,7 +130,7 @@ def cross_validate_component_scan(traj_data, component_array, train_fraction=0.9
 
     return train_log_liks, cv_log_liks
 
-def sgmm_fit_with_attempts(traj_data, n_components, n_attempts=10, covar_type="kronecker", frame_weights=None, thresh=1e-3, kabsch_thresh=1e-1, dtype=torch.float32, device=torch.device("cuda:0"), verbose=True):
+def sgmm_fit_with_attempts(traj_data, n_components, n_attempts=10, covar_type="kronecker", frame_weights=None, thresh=1e-3, kabsch_thresh=1e-1, dtype=torch.float32, device=torch.device("cuda:0"), init_component_method="kmeans++", random_seed=None, verbose=True):
     """
     Fit ShapeGMM model using multiple attempts and return the best model.
 
@@ -139,6 +154,15 @@ def sgmm_fit_with_attempts(traj_data, n_components, n_attempts=10, covar_type="k
         Tensor data type.
     device : torch.device
         Device to use for computation.
+    random_seed : int, optional
+        Seed for random number generation (NumPy). If provided, ensures reproducibility.
+    init_component_method : str, optional
+        Method for initializing component assignments. Options include:
+        - 'kmeans++': Use kmeans++ style seeding.  Has an initial random component.
+        - 'random': randomly assign frames to components.
+        - 'chunk': assign frames in sequential blocks.
+        - 'read': assume component_ids are provided externally.
+        Default is 'kmeans++'.
     verbose : bool
         If True, prints per-attempt summary.
 
@@ -149,6 +173,8 @@ def sgmm_fit_with_attempts(traj_data, n_components, n_attempts=10, covar_type="k
     """
     n_frames = traj_data.shape[0]
     n_atoms = traj_data.shape[1]
+    if random_seed is None:
+        random_seed = 1234
 
     if verbose:
         print(f"Number of components    : {n_components}")
@@ -158,6 +184,8 @@ def sgmm_fit_with_attempts(traj_data, n_components, n_attempts=10, covar_type="k
         print(f"Device                  : {device}")
         print(f"Number of train frames  : {n_frames}")
         print(f"Number of atoms         : {n_atoms}")
+        print(f"Init Component Method   : {init_component_method}")
+        print(f"Random seed             : {random_seed}")
         print("%8s %19s %15s" % ("Attempt", "Log Like per Frame", "Wallclock Time (s)"))
         print("%50s" % ("-" * 60))
         sys.stdout.flush()
@@ -174,7 +202,8 @@ def sgmm_fit_with_attempts(traj_data, n_components, n_attempts=10, covar_type="k
             dtype=dtype,
             device=device,
             kabsch_thresh=kabsch_thresh,
-            random_seed= 45612 + 133*attempt,
+            init_component_method = init_component_method,
+            random_seed= random_seed + 133*attempt,
             verbose=False
         )
         model.fit(traj_data, frame_weights=frame_weights)

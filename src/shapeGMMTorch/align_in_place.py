@@ -50,7 +50,7 @@ def trajectory_sd(traj_tensor: torch.Tensor, ref_tensor: torch.Tensor) -> torch.
     # meta data
     n_atoms = traj_tensor.shape[1]
     # get rotation matrices
-    rot_mat = torch_align_rot_mat(traj_tensor, ref_tensor)
+    rot_mat = align_rot_mats(traj_tensor, ref_tensor)
     # do rotation
     traj_tensor = torch.matmul(traj_tensor,rot_mat)
     disp = (traj_tensor - ref_tensor).to(torch.float64)
@@ -552,7 +552,6 @@ def maximum_likelihood_kronecker_alignment_frame_weighted_in_place(
 # =========================
 
 if hasattr(torch, 'compile'):
-    #torch_align_rot_mat = torch.compile(torch_align_rot_mat)
     align_uniform_in_place = torch.compile(align_uniform_in_place)
     align_kronecker_in_place = torch.compile(align_kronecker_in_place)
     maximum_likelihood_uniform_alignment_in_place = torch.compile(maximum_likelihood_uniform_alignment_in_place)
