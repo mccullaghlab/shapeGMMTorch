@@ -627,7 +627,7 @@ class ShapeGMM:
             Reconstructed ShapeGMM instance.
         """
 
-        state = torch.load(filename, map_location="cpu")
+        state = torch.load(filename, map_location="cpu", weights_only=False)
         
         model = ShapeGMM(
             n_components=state['n_components'],
