@@ -13,10 +13,9 @@ def gen_mv(mean, prec, n_samples=10000):
     # meta data
     n_atoms = mean.shape[0]
     e, v = np.linalg.eigh(prec)
-    # compute stdev of each mode
-    stdev = np.sqrt(1/e)
-    # force first to be zero
-    stdev[0] = 0.0
+    # compute stdev of each mode forcing first mode to have a zero
+    stdev = np.zeros_like(e)
+    stdev[1:] = np.sqrt(1/e[1:])
     # generate normally distributed random variables (mean 0, stdev 1)
     norms = np.random.normal(size=(n_atoms,n_samples*3))
     # multiply by normal mode stdev

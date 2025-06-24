@@ -1,0 +1,21 @@
+2.7.0+cu126
+Number of frames: 305209
+Total number of atoms: 577
+Number of selected atoms: 105
+Frame array: [ 30520  61041 152604 305209]
+Component array: [1 2 3 4 5 6 7 8]
+Log thresh: 1e-08
+n_iter: 30
+Traceback (most recent call last):
+  File "/home/mmccull/Documents/shapeGMM_tests/DESRES-Trajectory_pnas2012-2f4k-360K-protein/clustering/timing/v2.0/uniform/float32_old/timing_test_n_clusters_n_frames.cpu.py", line 57, in <module>
+    sgmm.fit(pos_traj[::delta])
+  File "/home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch/torch_sgmm.py", line 100, in fit
+    centers_tensor[k], vars_tensor[k] = torch_align.torch_iterative_align_uniform_weighted(traj_tensor[indeces],frame_weights_tensor[indeces],thresh=self.kabsch_thresh,device=self.device,dtype=self.dtype)[1:]
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch/torch_align.py", line 157, in torch_iterative_align_uniform_weighted
+    rot_mat = torch_align_rot_mat(traj_tensor, avg)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch/torch_align.py", line 30, in torch_align_rot_mat
+    c_mats = torch.matmul(ref_tensor.T,traj_tensor)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: expected scalar type Float but found Double

@@ -1,0 +1,464 @@
+
+class GraphModule(torch.nn.Module):
+    def forward(self, L_args_0_: "f64[30521, 105, 3][315, 3, 1]cpu", L_args_1_: "f64[30521][1]cpu"):
+        l_args_0_ = L_args_0_
+        l_args_1_ = L_args_1_
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:489 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor.to(dtype)
+        weight_tensor: "f64[30521][1]cpu" = l_args_1_.to(torch.float64);  l_args_1_ = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:490 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor / weight_tensor.sum()
+        sum_1: "f64[][]cpu" = weight_tensor.sum()
+        weight_tensor_1: "f64[30521][1]cpu" = weight_tensor / sum_1;  weight_tensor = sum_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:491 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: sqrt_w = torch.sqrt(weight_tensor).view(-1, 1, 1).to(torch.float64)
+        sqrt: "f64[30521][1]cpu" = torch.sqrt(weight_tensor_1)
+        view: "f64[30521, 1, 1][1, 1, 1]cpu" = sqrt.view(-1, 1, 1);  sqrt = None
+        sqrt_w: "f64[30521, 1, 1][1, 1, 1]cpu" = view.to(torch.float64);  view = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:495 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weighted_avg = traj_tensor[0]
+        weighted_avg: "f64[105, 3][3, 1]cpu" = l_args_0_[0]
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:16 in align_rot_mats, code: c_mats = torch.matmul(ref_tensor.T,traj_tensor)
+        getattr_1: "f64[3, 105][1, 3]cpu" = weighted_avg.T;  weighted_avg = None
+        c_mats: "f64[30521, 3, 3][9, 3, 1]cpu" = torch.matmul(getattr_1, l_args_0_);  getattr_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:18 in align_rot_mats, code: u, s, v = torch.linalg.svd(c_mats)
+        linalg_svd = torch._C._linalg.linalg_svd(c_mats);  c_mats = None
+        u: "f64[30521, 3, 3][9, 1, 3]cpu" = linalg_svd[0]
+        s: "f64[30521, 3][3, 1]cpu" = linalg_svd[1];  s = None
+        v: "f64[30521, 3, 3][9, 1, 3]cpu" = linalg_svd[2];  linalg_svd = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:20 in align_rot_mats, code: prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
+        linalg_det: "f64[30521][1]cpu" = torch._C._linalg.linalg_det(u)
+        linalg_det_1: "f64[30521][1]cpu" = torch._C._linalg.linalg_det(v)
+        prod_dets: "f64[30521][1]cpu" = linalg_det * linalg_det_1;  linalg_det = linalg_det_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:21 in align_rot_mats, code: u[:,:,-1] *= prod_dets.unsqueeze(-1)
+        getitem_4: "f64[30521, 3][9, 1]cpu" = u[(slice(None, None, None), slice(None, None, None), -1)]
+        unsqueeze: "f64[30521, 1][1, 1]cpu" = prod_dets.unsqueeze(-1);  prod_dets = None
+        getitem_4 *= unsqueeze;  imul: "f64[30521, 3][9, 1]cpu" = getitem_4;  getitem_4 = unsqueeze = None
+        u[(slice(None, None, None), slice(None, None, None), -1)] = imul;  setitem = u;  imul = setitem = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:23 in align_rot_mats, code: rot_mat = torch.matmul(u,v).transpose(1,2)
+        matmul_1: "f64[30521, 3, 3][9, 3, 1]cpu" = torch.matmul(u, v);  u = v = None
+        rot_mat: "f64[30521, 3, 3][9, 1, 3]cpu" = matmul_1.transpose(1, 2);  matmul_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:26 in align_rot_mats, code: torch.cuda.empty_cache()
+        empty_cache = torch.cuda.memory.empty_cache();  empty_cache = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:511 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: traj_tensor[...] = torch.matmul(traj_tensor, rot_mat)
+        matmul_2: "f64[30521, 105, 3][315, 3, 1]cpu" = torch.matmul(l_args_0_, rot_mat);  rot_mat = None
+        l_args_0_[Ellipsis] = matmul_2;  setitem_1 = l_args_0_;  matmul_2 = setitem_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:514 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: avg = torch.einsum('ijk,i->jk', traj_tensor, weight_tensor)
+        avg: "f64[105, 3][3, 1]cpu" = torch.functional.einsum('ijk,i->jk', l_args_0_, weight_tensor_1);  weight_tensor_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:517 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: disp = (traj_tensor - avg).to(torch.float64)
+        sub: "f64[30521, 105, 3][315, 3, 1]cpu" = l_args_0_ - avg;  l_args_0_ = None
+        disp: "f64[30521, 105, 3][315, 3, 1]cpu" = sub.to(torch.float64);  sub = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:520 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: covar = _kronecker_covar(disp * sqrt_w, covar_norm)
+        mul_1: "f64[30521, 105, 3][315, 3, 1]cpu" = disp * sqrt_w;  disp = sqrt_w = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:68 in _kronecker_covar, code: disp = torch.transpose(disp,0,1).reshape(-1,n_frames*3)
+        transpose_1: "f64[105, 30521, 3][3, 315, 1]cpu" = torch.transpose(mul_1, 0, 1);  mul_1 = None
+        disp_1: "f64[105, 91563][91563, 1]cpu" = transpose_1.reshape(-1, 91563);  transpose_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:69 in _kronecker_covar, code: covar = disp @ disp.T
+        getattr_2: "f64[91563, 105][1, 91563]cpu" = disp_1.T
+        covar: "f64[105, 105][105, 1]cpu" = disp_1 @ getattr_2;  disp_1 = getattr_2 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:70 in _kronecker_covar, code: covar *= covar_norm
+        covar *= 0.3333333333333333;  covar_1: "f64[105, 105][105, 1]cpu" = covar;  covar = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:89 in _pseudo_inv, code: e, v = torch.linalg.eigh(sigma)
+        linalg_eigh = torch._C._linalg.linalg_eigh(covar_1);  covar_1 = None
+        e: "f64[105][1]cpu" = linalg_eigh[0]
+        v_1: "f64[105, 105][1, 105]cpu" = linalg_eigh[1];  linalg_eigh = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:91 in _pseudo_inv, code: lpdet = torch.sum(torch.log(e[1:]))
+        getitem_7: "f64[104][1]cpu" = e[slice(1, None, None)]
+        log: "f64[104][1]cpu" = torch.log(getitem_7);  getitem_7 = None
+        lpdet: "f64[][]cpu" = torch.sum(log);  log = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:93 in _pseudo_inv, code: e[1:] = torch.reciprocal(e[1:])
+        getitem_8: "f64[104][1]cpu" = e[slice(1, None, None)]
+        reciprocal: "f64[104][1]cpu" = torch.reciprocal(getitem_8);  getitem_8 = None
+        e[slice(1, None, None)] = reciprocal;  setitem_2 = e;  reciprocal = setitem_2 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:95 in _pseudo_inv, code: e[0] = 0.0
+        e[0] = 0.0;  setitem_3 = e;  setitem_3 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:97 in _pseudo_inv, code: inv = v @ torch.diag(e) @ v.T
+        diag: "f64[105, 105][105, 1]cpu" = torch.diag(e);  e = None
+        matmul_4: "f64[105, 105][105, 1]cpu" = v_1 @ diag;  diag = None
+        getattr_3: "f64[105, 105][105, 1]cpu" = v_1.T;  v_1 = None
+        inv: "f64[105, 105][105, 1]cpu" = matmul_4 @ getattr_3;  matmul_4 = getattr_3 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:526 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: log_lik = -1.5 * lpdet
+        log_lik: "f64[][]cpu" = -1.5 * lpdet;  lpdet = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:528 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: delta_log_lik = torch.abs(log_lik - old_log_lik)
+        sub_1: "f64[][]cpu" = log_lik - 0.0;  log_lik = None
+        delta_log_lik: "f64[][]cpu" = torch.abs(sub_1);  sub_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:535 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weighted_avg = torch.matmul(precision.to(dtype), avg)
+        to_3: "f64[105, 105][105, 1]cpu" = inv.to(torch.float64);  inv = None
+        weighted_avg_1: "f64[105, 3][3, 1]cpu" = torch.matmul(to_3, avg);  to_3 = avg = weighted_avg_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:506 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: while delta_log_lik > thresh and kabsch_iter < max_iter:
+        gt: "b8[][]cpu" = delta_log_lik > 0.1;  delta_log_lik = gt = None
+        
+
+class GraphModule(torch.nn.Module):
+    def forward(self, L_args_0_: "f64[30521, 105, 3][315, 3, 1]cpu", L_args_1_: "f64[30521][1]cpu"):
+        l_args_0_ = L_args_0_
+        l_args_1_ = L_args_1_
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:489 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor.to(dtype)
+        weight_tensor: "f64[30521][1]cpu" = l_args_1_.to(torch.float64);  l_args_1_ = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:490 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor / weight_tensor.sum()
+        sum_1: "f64[][]cpu" = weight_tensor.sum()
+        weight_tensor_1: "f64[30521][1]cpu" = weight_tensor / sum_1;  weight_tensor = sum_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:491 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: sqrt_w = torch.sqrt(weight_tensor).view(-1, 1, 1).to(torch.float64)
+        sqrt: "f64[30521][1]cpu" = torch.sqrt(weight_tensor_1)
+        view: "f64[30521, 1, 1][1, 1, 1]cpu" = sqrt.view(-1, 1, 1);  sqrt = None
+        sqrt_w: "f64[30521, 1, 1][1, 1, 1]cpu" = view.to(torch.float64);  view = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:495 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weighted_avg = traj_tensor[0]
+        weighted_avg: "f64[105, 3][3, 1]cpu" = l_args_0_[0]
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:16 in align_rot_mats, code: c_mats = torch.matmul(ref_tensor.T,traj_tensor)
+        getattr_1: "f64[3, 105][1, 3]cpu" = weighted_avg.T;  weighted_avg = None
+        c_mats: "f64[30521, 3, 3][9, 3, 1]cpu" = torch.matmul(getattr_1, l_args_0_);  getattr_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:18 in align_rot_mats, code: u, s, v = torch.linalg.svd(c_mats)
+        linalg_svd = torch._C._linalg.linalg_svd(c_mats);  c_mats = None
+        u: "f64[30521, 3, 3][9, 1, 3]cpu" = linalg_svd[0]
+        s: "f64[30521, 3][3, 1]cpu" = linalg_svd[1];  s = None
+        v: "f64[30521, 3, 3][9, 1, 3]cpu" = linalg_svd[2];  linalg_svd = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:20 in align_rot_mats, code: prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
+        linalg_det: "f64[30521][1]cpu" = torch._C._linalg.linalg_det(u)
+        linalg_det_1: "f64[30521][1]cpu" = torch._C._linalg.linalg_det(v)
+        prod_dets: "f64[30521][1]cpu" = linalg_det * linalg_det_1;  linalg_det = linalg_det_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:21 in align_rot_mats, code: u[:,:,-1] *= prod_dets.unsqueeze(-1)
+        getitem_4: "f64[30521, 3][9, 1]cpu" = u[(slice(None, None, None), slice(None, None, None), -1)]
+        unsqueeze: "f64[30521, 1][1, 1]cpu" = prod_dets.unsqueeze(-1);  prod_dets = None
+        getitem_4 *= unsqueeze;  imul: "f64[30521, 3][9, 1]cpu" = getitem_4;  getitem_4 = unsqueeze = None
+        u[(slice(None, None, None), slice(None, None, None), -1)] = imul;  setitem = u;  imul = setitem = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:23 in align_rot_mats, code: rot_mat = torch.matmul(u,v).transpose(1,2)
+        matmul_1: "f64[30521, 3, 3][9, 3, 1]cpu" = torch.matmul(u, v);  u = v = None
+        rot_mat: "f64[30521, 3, 3][9, 1, 3]cpu" = matmul_1.transpose(1, 2);  matmul_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:26 in align_rot_mats, code: torch.cuda.empty_cache()
+        empty_cache = torch.cuda.memory.empty_cache();  empty_cache = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:511 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: traj_tensor[...] = torch.matmul(traj_tensor, rot_mat)
+        matmul_2: "f64[30521, 105, 3][315, 3, 1]cpu" = torch.matmul(l_args_0_, rot_mat);  rot_mat = None
+        l_args_0_[Ellipsis] = matmul_2;  setitem_1 = l_args_0_;  matmul_2 = setitem_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:514 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: avg = torch.einsum('ijk,i->jk', traj_tensor, weight_tensor)
+        avg: "f64[105, 3][3, 1]cpu" = torch.functional.einsum('ijk,i->jk', l_args_0_, weight_tensor_1);  weight_tensor_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:517 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: disp = (traj_tensor - avg).to(torch.float64)
+        sub: "f64[30521, 105, 3][315, 3, 1]cpu" = l_args_0_ - avg;  l_args_0_ = None
+        disp: "f64[30521, 105, 3][315, 3, 1]cpu" = sub.to(torch.float64);  sub = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:520 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: covar = _kronecker_covar(disp * sqrt_w, covar_norm)
+        mul_1: "f64[30521, 105, 3][315, 3, 1]cpu" = disp * sqrt_w;  disp = sqrt_w = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:68 in _kronecker_covar, code: disp = torch.transpose(disp,0,1).reshape(-1,n_frames*3)
+        transpose_1: "f64[105, 30521, 3][3, 315, 1]cpu" = torch.transpose(mul_1, 0, 1);  mul_1 = None
+        disp_1: "f64[105, 91563][91563, 1]cpu" = transpose_1.reshape(-1, 91563);  transpose_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:69 in _kronecker_covar, code: covar = disp @ disp.T
+        getattr_2: "f64[91563, 105][1, 91563]cpu" = disp_1.T
+        covar: "f64[105, 105][105, 1]cpu" = disp_1 @ getattr_2;  disp_1 = getattr_2 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:70 in _kronecker_covar, code: covar *= covar_norm
+        covar *= 0.3333333333333333;  covar_1: "f64[105, 105][105, 1]cpu" = covar;  covar = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:89 in _pseudo_inv, code: e, v = torch.linalg.eigh(sigma)
+        linalg_eigh = torch._C._linalg.linalg_eigh(covar_1);  covar_1 = None
+        e: "f64[105][1]cpu" = linalg_eigh[0]
+        v_1: "f64[105, 105][1, 105]cpu" = linalg_eigh[1];  linalg_eigh = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:91 in _pseudo_inv, code: lpdet = torch.sum(torch.log(e[1:]))
+        getitem_7: "f64[104][1]cpu" = e[slice(1, None, None)]
+        log: "f64[104][1]cpu" = torch.log(getitem_7);  getitem_7 = None
+        lpdet: "f64[][]cpu" = torch.sum(log);  log = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:93 in _pseudo_inv, code: e[1:] = torch.reciprocal(e[1:])
+        getitem_8: "f64[104][1]cpu" = e[slice(1, None, None)]
+        reciprocal: "f64[104][1]cpu" = torch.reciprocal(getitem_8);  getitem_8 = None
+        e[slice(1, None, None)] = reciprocal;  setitem_2 = e;  reciprocal = setitem_2 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:95 in _pseudo_inv, code: e[0] = 0.0
+        e[0] = 0.0;  setitem_3 = e;  setitem_3 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:97 in _pseudo_inv, code: inv = v @ torch.diag(e) @ v.T
+        diag: "f64[105, 105][105, 1]cpu" = torch.diag(e);  e = None
+        matmul_4: "f64[105, 105][105, 1]cpu" = v_1 @ diag;  diag = None
+        getattr_3: "f64[105, 105][105, 1]cpu" = v_1.T;  v_1 = None
+        inv: "f64[105, 105][105, 1]cpu" = matmul_4 @ getattr_3;  matmul_4 = getattr_3 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:526 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: log_lik = -1.5 * lpdet
+        log_lik: "f64[][]cpu" = -1.5 * lpdet;  lpdet = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:528 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: delta_log_lik = torch.abs(log_lik - old_log_lik)
+        sub_1: "f64[][]cpu" = log_lik - 0.0;  log_lik = None
+        delta_log_lik: "f64[][]cpu" = torch.abs(sub_1);  sub_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:535 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weighted_avg = torch.matmul(precision.to(dtype), avg)
+        to_3: "f64[105, 105][105, 1]cpu" = inv.to(torch.float64);  inv = None
+        weighted_avg_1: "f64[105, 3][3, 1]cpu" = torch.matmul(to_3, avg);  to_3 = avg = weighted_avg_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:506 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: while delta_log_lik > thresh and kabsch_iter < max_iter:
+        gt: "b8[][]cpu" = delta_log_lik > 0.1;  delta_log_lik = gt = None
+        
+
+class GraphModule(torch.nn.Module):
+    def forward(self, L_args_0_: "f64[30521, 105, 3][315, 3, 1]cpu", L_args_1_: "f64[30521][1]cpu", L_kwargs_ref_tensor_: "f64[105, 3][3, 1]cpu", L_kwargs_ref_precision_tensor_: "f64[105, 105][105, 1]cpu"):
+        l_args_0_ = L_args_0_
+        l_args_1_ = L_args_1_
+        l_kwargs_ref_tensor_ = L_kwargs_ref_tensor_
+        l_kwargs_ref_precision_tensor_ = L_kwargs_ref_precision_tensor_
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:489 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor.to(dtype)
+        weight_tensor: "f64[30521][1]cpu" = l_args_1_.to(torch.float64);  l_args_1_ = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:490 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor / weight_tensor.sum()
+        sum_1: "f64[][]cpu" = weight_tensor.sum()
+        weight_tensor_1: "f64[30521][1]cpu" = weight_tensor / sum_1;  weight_tensor = sum_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:491 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: sqrt_w = torch.sqrt(weight_tensor).view(-1, 1, 1).to(torch.float64)
+        sqrt: "f64[30521][1]cpu" = torch.sqrt(weight_tensor_1)
+        view: "f64[30521, 1, 1][1, 1, 1]cpu" = sqrt.view(-1, 1, 1);  sqrt = None
+        sqrt_w: "f64[30521, 1, 1][1, 1, 1]cpu" = view.to(torch.float64);  view = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:497 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weighted_avg = torch.matmul(ref_precision_tensor, ref_tensor.to(torch.float64)).to(dtype)
+        to_2: "f64[105, 3][3, 1]cpu" = l_kwargs_ref_tensor_.to(torch.float64);  l_kwargs_ref_tensor_ = None
+        matmul: "f64[105, 3][3, 1]cpu" = torch.matmul(l_kwargs_ref_precision_tensor_, to_2);  l_kwargs_ref_precision_tensor_ = to_2 = None
+        weighted_avg: "f64[105, 3][3, 1]cpu" = matmul.to(torch.float64);  matmul = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:16 in align_rot_mats, code: c_mats = torch.matmul(ref_tensor.T,traj_tensor)
+        getattr_1: "f64[3, 105][1, 3]cpu" = weighted_avg.T;  weighted_avg = None
+        c_mats: "f64[30521, 3, 3][9, 3, 1]cpu" = torch.matmul(getattr_1, l_args_0_);  getattr_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:18 in align_rot_mats, code: u, s, v = torch.linalg.svd(c_mats)
+        linalg_svd = torch._C._linalg.linalg_svd(c_mats);  c_mats = None
+        u: "f64[30521, 3, 3][9, 1, 3]cpu" = linalg_svd[0]
+        s: "f64[30521, 3][3, 1]cpu" = linalg_svd[1];  s = None
+        v: "f64[30521, 3, 3][9, 1, 3]cpu" = linalg_svd[2];  linalg_svd = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:20 in align_rot_mats, code: prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
+        linalg_det: "f64[30521][1]cpu" = torch._C._linalg.linalg_det(u)
+        linalg_det_1: "f64[30521][1]cpu" = torch._C._linalg.linalg_det(v)
+        prod_dets: "f64[30521][1]cpu" = linalg_det * linalg_det_1;  linalg_det = linalg_det_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:21 in align_rot_mats, code: u[:,:,-1] *= prod_dets.unsqueeze(-1)
+        getitem_3: "f64[30521, 3][9, 1]cpu" = u[(slice(None, None, None), slice(None, None, None), -1)]
+        unsqueeze: "f64[30521, 1][1, 1]cpu" = prod_dets.unsqueeze(-1);  prod_dets = None
+        getitem_3 *= unsqueeze;  imul: "f64[30521, 3][9, 1]cpu" = getitem_3;  getitem_3 = unsqueeze = None
+        u[(slice(None, None, None), slice(None, None, None), -1)] = imul;  setitem = u;  imul = setitem = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:23 in align_rot_mats, code: rot_mat = torch.matmul(u,v).transpose(1,2)
+        matmul_2: "f64[30521, 3, 3][9, 3, 1]cpu" = torch.matmul(u, v);  u = v = None
+        rot_mat: "f64[30521, 3, 3][9, 1, 3]cpu" = matmul_2.transpose(1, 2);  matmul_2 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:26 in align_rot_mats, code: torch.cuda.empty_cache()
+        empty_cache = torch.cuda.memory.empty_cache();  empty_cache = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:511 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: traj_tensor[...] = torch.matmul(traj_tensor, rot_mat)
+        matmul_3: "f64[30521, 105, 3][315, 3, 1]cpu" = torch.matmul(l_args_0_, rot_mat);  rot_mat = None
+        l_args_0_[Ellipsis] = matmul_3;  setitem_1 = l_args_0_;  matmul_3 = setitem_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:514 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: avg = torch.einsum('ijk,i->jk', traj_tensor, weight_tensor)
+        avg: "f64[105, 3][3, 1]cpu" = torch.functional.einsum('ijk,i->jk', l_args_0_, weight_tensor_1);  weight_tensor_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:517 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: disp = (traj_tensor - avg).to(torch.float64)
+        sub: "f64[30521, 105, 3][315, 3, 1]cpu" = l_args_0_ - avg;  l_args_0_ = None
+        disp: "f64[30521, 105, 3][315, 3, 1]cpu" = sub.to(torch.float64);  sub = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:520 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: covar = _kronecker_covar(disp * sqrt_w, covar_norm)
+        mul_1: "f64[30521, 105, 3][315, 3, 1]cpu" = disp * sqrt_w;  disp = sqrt_w = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:68 in _kronecker_covar, code: disp = torch.transpose(disp,0,1).reshape(-1,n_frames*3)
+        transpose_1: "f64[105, 30521, 3][3, 315, 1]cpu" = torch.transpose(mul_1, 0, 1);  mul_1 = None
+        disp_1: "f64[105, 91563][91563, 1]cpu" = transpose_1.reshape(-1, 91563);  transpose_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:69 in _kronecker_covar, code: covar = disp @ disp.T
+        getattr_2: "f64[91563, 105][1, 91563]cpu" = disp_1.T
+        covar: "f64[105, 105][105, 1]cpu" = disp_1 @ getattr_2;  disp_1 = getattr_2 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:70 in _kronecker_covar, code: covar *= covar_norm
+        covar *= 0.3333333333333333;  covar_1: "f64[105, 105][105, 1]cpu" = covar;  covar = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:89 in _pseudo_inv, code: e, v = torch.linalg.eigh(sigma)
+        linalg_eigh = torch._C._linalg.linalg_eigh(covar_1);  covar_1 = None
+        e: "f64[105][1]cpu" = linalg_eigh[0]
+        v_1: "f64[105, 105][1, 105]cpu" = linalg_eigh[1];  linalg_eigh = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:91 in _pseudo_inv, code: lpdet = torch.sum(torch.log(e[1:]))
+        getitem_6: "f64[104][1]cpu" = e[slice(1, None, None)]
+        log: "f64[104][1]cpu" = torch.log(getitem_6);  getitem_6 = None
+        lpdet: "f64[][]cpu" = torch.sum(log);  log = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:93 in _pseudo_inv, code: e[1:] = torch.reciprocal(e[1:])
+        getitem_7: "f64[104][1]cpu" = e[slice(1, None, None)]
+        reciprocal: "f64[104][1]cpu" = torch.reciprocal(getitem_7);  getitem_7 = None
+        e[slice(1, None, None)] = reciprocal;  setitem_2 = e;  reciprocal = setitem_2 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:95 in _pseudo_inv, code: e[0] = 0.0
+        e[0] = 0.0;  setitem_3 = e;  setitem_3 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:97 in _pseudo_inv, code: inv = v @ torch.diag(e) @ v.T
+        diag: "f64[105, 105][105, 1]cpu" = torch.diag(e);  e = None
+        matmul_5: "f64[105, 105][105, 1]cpu" = v_1 @ diag;  diag = None
+        getattr_3: "f64[105, 105][105, 1]cpu" = v_1.T;  v_1 = None
+        inv: "f64[105, 105][105, 1]cpu" = matmul_5 @ getattr_3;  matmul_5 = getattr_3 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:526 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: log_lik = -1.5 * lpdet
+        log_lik: "f64[][]cpu" = -1.5 * lpdet;  lpdet = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:528 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: delta_log_lik = torch.abs(log_lik - old_log_lik)
+        sub_1: "f64[][]cpu" = log_lik - 0.0;  log_lik = None
+        delta_log_lik: "f64[][]cpu" = torch.abs(sub_1);  sub_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:535 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weighted_avg = torch.matmul(precision.to(dtype), avg)
+        to_5: "f64[105, 105][105, 1]cpu" = inv.to(torch.float64);  inv = None
+        weighted_avg_1: "f64[105, 3][3, 1]cpu" = torch.matmul(to_5, avg);  to_5 = avg = weighted_avg_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:506 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: while delta_log_lik > thresh and kabsch_iter < max_iter:
+        gt: "b8[][]cpu" = delta_log_lik > 0.1;  delta_log_lik = gt = None
+        
+
+class GraphModule(torch.nn.Module):
+    def forward(self, L_args_0_: "f64[30521, 105, 3][315, 3, 1]cpu", L_args_1_: "f64[30521][1]cpu", L_kwargs_ref_tensor_: "f64[105, 3][3, 1]cpu", L_kwargs_ref_precision_tensor_: "f64[105, 105][105, 1]cpu"):
+        l_args_0_ = L_args_0_
+        l_args_1_ = L_args_1_
+        l_kwargs_ref_tensor_ = L_kwargs_ref_tensor_
+        l_kwargs_ref_precision_tensor_ = L_kwargs_ref_precision_tensor_
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:489 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor.to(dtype)
+        weight_tensor: "f64[30521][1]cpu" = l_args_1_.to(torch.float64);  l_args_1_ = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:490 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weight_tensor = weight_tensor / weight_tensor.sum()
+        sum_1: "f64[][]cpu" = weight_tensor.sum()
+        weight_tensor_1: "f64[30521][1]cpu" = weight_tensor / sum_1;  weight_tensor = sum_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:491 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: sqrt_w = torch.sqrt(weight_tensor).view(-1, 1, 1).to(torch.float64)
+        sqrt: "f64[30521][1]cpu" = torch.sqrt(weight_tensor_1)
+        view: "f64[30521, 1, 1][1, 1, 1]cpu" = sqrt.view(-1, 1, 1);  sqrt = None
+        sqrt_w: "f64[30521, 1, 1][1, 1, 1]cpu" = view.to(torch.float64);  view = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:497 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weighted_avg = torch.matmul(ref_precision_tensor, ref_tensor.to(torch.float64)).to(dtype)
+        to_2: "f64[105, 3][3, 1]cpu" = l_kwargs_ref_tensor_.to(torch.float64);  l_kwargs_ref_tensor_ = None
+        matmul: "f64[105, 3][3, 1]cpu" = torch.matmul(l_kwargs_ref_precision_tensor_, to_2);  l_kwargs_ref_precision_tensor_ = to_2 = None
+        weighted_avg: "f64[105, 3][3, 1]cpu" = matmul.to(torch.float64);  matmul = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:16 in align_rot_mats, code: c_mats = torch.matmul(ref_tensor.T,traj_tensor)
+        getattr_1: "f64[3, 105][1, 3]cpu" = weighted_avg.T;  weighted_avg = None
+        c_mats: "f64[30521, 3, 3][9, 3, 1]cpu" = torch.matmul(getattr_1, l_args_0_);  getattr_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:18 in align_rot_mats, code: u, s, v = torch.linalg.svd(c_mats)
+        linalg_svd = torch._C._linalg.linalg_svd(c_mats);  c_mats = None
+        u: "f64[30521, 3, 3][9, 1, 3]cpu" = linalg_svd[0]
+        s: "f64[30521, 3][3, 1]cpu" = linalg_svd[1];  s = None
+        v: "f64[30521, 3, 3][9, 1, 3]cpu" = linalg_svd[2];  linalg_svd = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:20 in align_rot_mats, code: prod_dets = torch.linalg.det(u)*torch.linalg.det(v)
+        linalg_det: "f64[30521][1]cpu" = torch._C._linalg.linalg_det(u)
+        linalg_det_1: "f64[30521][1]cpu" = torch._C._linalg.linalg_det(v)
+        prod_dets: "f64[30521][1]cpu" = linalg_det * linalg_det_1;  linalg_det = linalg_det_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:21 in align_rot_mats, code: u[:,:,-1] *= prod_dets.unsqueeze(-1)
+        getitem_3: "f64[30521, 3][9, 1]cpu" = u[(slice(None, None, None), slice(None, None, None), -1)]
+        unsqueeze: "f64[30521, 1][1, 1]cpu" = prod_dets.unsqueeze(-1);  prod_dets = None
+        getitem_3 *= unsqueeze;  imul: "f64[30521, 3][9, 1]cpu" = getitem_3;  getitem_3 = unsqueeze = None
+        u[(slice(None, None, None), slice(None, None, None), -1)] = imul;  setitem = u;  imul = setitem = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:23 in align_rot_mats, code: rot_mat = torch.matmul(u,v).transpose(1,2)
+        matmul_2: "f64[30521, 3, 3][9, 3, 1]cpu" = torch.matmul(u, v);  u = v = None
+        rot_mat: "f64[30521, 3, 3][9, 1, 3]cpu" = matmul_2.transpose(1, 2);  matmul_2 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:26 in align_rot_mats, code: torch.cuda.empty_cache()
+        empty_cache = torch.cuda.memory.empty_cache();  empty_cache = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:511 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: traj_tensor[...] = torch.matmul(traj_tensor, rot_mat)
+        matmul_3: "f64[30521, 105, 3][315, 3, 1]cpu" = torch.matmul(l_args_0_, rot_mat);  rot_mat = None
+        l_args_0_[Ellipsis] = matmul_3;  setitem_1 = l_args_0_;  matmul_3 = setitem_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:514 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: avg = torch.einsum('ijk,i->jk', traj_tensor, weight_tensor)
+        avg: "f64[105, 3][3, 1]cpu" = torch.functional.einsum('ijk,i->jk', l_args_0_, weight_tensor_1);  weight_tensor_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:517 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: disp = (traj_tensor - avg).to(torch.float64)
+        sub: "f64[30521, 105, 3][315, 3, 1]cpu" = l_args_0_ - avg;  l_args_0_ = None
+        disp: "f64[30521, 105, 3][315, 3, 1]cpu" = sub.to(torch.float64);  sub = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:520 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: covar = _kronecker_covar(disp * sqrt_w, covar_norm)
+        mul_1: "f64[30521, 105, 3][315, 3, 1]cpu" = disp * sqrt_w;  disp = sqrt_w = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:68 in _kronecker_covar, code: disp = torch.transpose(disp,0,1).reshape(-1,n_frames*3)
+        transpose_1: "f64[105, 30521, 3][3, 315, 1]cpu" = torch.transpose(mul_1, 0, 1);  mul_1 = None
+        disp_1: "f64[105, 91563][91563, 1]cpu" = transpose_1.reshape(-1, 91563);  transpose_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:69 in _kronecker_covar, code: covar = disp @ disp.T
+        getattr_2: "f64[91563, 105][1, 91563]cpu" = disp_1.T
+        covar: "f64[105, 105][105, 1]cpu" = disp_1 @ getattr_2;  disp_1 = getattr_2 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:70 in _kronecker_covar, code: covar *= covar_norm
+        covar *= 0.3333333333333333;  covar_1: "f64[105, 105][105, 1]cpu" = covar;  covar = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:89 in _pseudo_inv, code: e, v = torch.linalg.eigh(sigma)
+        linalg_eigh = torch._C._linalg.linalg_eigh(covar_1);  covar_1 = None
+        e: "f64[105][1]cpu" = linalg_eigh[0]
+        v_1: "f64[105, 105][1, 105]cpu" = linalg_eigh[1];  linalg_eigh = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:91 in _pseudo_inv, code: lpdet = torch.sum(torch.log(e[1:]))
+        getitem_6: "f64[104][1]cpu" = e[slice(1, None, None)]
+        log: "f64[104][1]cpu" = torch.log(getitem_6);  getitem_6 = None
+        lpdet: "f64[][]cpu" = torch.sum(log);  log = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:93 in _pseudo_inv, code: e[1:] = torch.reciprocal(e[1:])
+        getitem_7: "f64[104][1]cpu" = e[slice(1, None, None)]
+        reciprocal: "f64[104][1]cpu" = torch.reciprocal(getitem_7);  getitem_7 = None
+        e[slice(1, None, None)] = reciprocal;  setitem_2 = e;  reciprocal = setitem_2 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:95 in _pseudo_inv, code: e[0] = 0.0
+        e[0] = 0.0;  setitem_3 = e;  setitem_3 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:97 in _pseudo_inv, code: inv = v @ torch.diag(e) @ v.T
+        diag: "f64[105, 105][105, 1]cpu" = torch.diag(e);  e = None
+        matmul_5: "f64[105, 105][105, 1]cpu" = v_1 @ diag;  diag = None
+        getattr_3: "f64[105, 105][105, 1]cpu" = v_1.T;  v_1 = None
+        inv: "f64[105, 105][105, 1]cpu" = matmul_5 @ getattr_3;  matmul_5 = getattr_3 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:526 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: log_lik = -1.5 * lpdet
+        log_lik: "f64[][]cpu" = -1.5 * lpdet;  lpdet = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:528 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: delta_log_lik = torch.abs(log_lik - old_log_lik)
+        sub_1: "f64[][]cpu" = log_lik - 0.0;  log_lik = None
+        delta_log_lik: "f64[][]cpu" = torch.abs(sub_1);  sub_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:535 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: weighted_avg = torch.matmul(precision.to(dtype), avg)
+        to_5: "f64[105, 105][105, 1]cpu" = inv.to(torch.float64);  inv = None
+        weighted_avg_1: "f64[105, 3][3, 1]cpu" = torch.matmul(to_5, avg);  to_5 = avg = weighted_avg_1 = None
+        
+         # File: /home/mmccull/apps/anaconda3/lib/python3.12/site-packages/shapeGMMTorch-2.0.0-py3.12.egg/shapeGMMTorch/align_in_place.py:506 in maximum_likelihood_kronecker_alignment_frame_weighted_in_place, code: while delta_log_lik > thresh and kabsch_iter < max_iter:
+        gt: "b8[][]cpu" = delta_log_lik > 0.1;  delta_log_lik = gt = None
+        
+2.7.0+cu126
+Number of frames: 305209
+Total number of atoms: 577
+Number of selected atoms: 105
+Frame array: [ 30520  61041 152604 305209]
+Component array: [1 2 3 4 5 6 7 8]
+Log thresh: 1e-08
+n_iter: 30

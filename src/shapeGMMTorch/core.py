@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from . import align_in_place
 from . import generation
+from . import version
 from .em import kronecker
 from .em import uniform
 
@@ -110,7 +111,6 @@ class ShapeGMM:
         self._init_components_flag = False
         self._is_fitted = False
         self.random_seed = random_seed
-        self.__version__ = 2.0
 
         if random_seed is not None:
             np.random.seed(random_seed)
@@ -295,6 +295,91 @@ class ShapeGMM:
             self._sort_object()
 
     @torch.no_grad()
+    def refine(self, traj_data: np.ndarray, frame_weights: np.ndarray = None):
+        """
+        Refine the ShapeGMM model with new data using Expectation Maximization (EM) with Maximum Likelihood alignments of each
+        component in every EM step.
+
+        Parameters
+        ----------
+        traj_data : np.ndarray
+            Trajectory data (n_frames, n_atoms, 3).
+        frame_weights : np.ndarray, optional
+            Weights for each frame.
+        """
+        if not self.is_fitted_:
+            raise RuntimeError("ShapeGMM must be fit before it can be refined.")
+
+        traj_tensor = torch.tensor(traj_data, dtype=self.dtype, device=self.device)
+        align_in_place.remove_center_of_geometry_in_place(traj_tensor)
+
+        if frame_weights is None:
+            self._verbose_print("Setting uniform frame weights.")
+            self.refine_frame_weights = np.ones(traj_tensor.shape[0]) / traj_tensor.shape[0]
+        else:
+            self._verbose_print("Using provided frame weights.")
+            self.refine_frame_weights = frame_weights / np.sum(frame_weights)
+
+        frame_weights_tensor = torch.tensor(self.refine_frame_weights, dtype=torch.float64, device=self.device)
+
+        means_tensor = torch.tensor(self.means_, dtype=self.dtype, device=self.device)
+        ln_weights_tensor = torch.log(torch.tensor(self.weights_, dtype=torch.float64, device=self.device))
+
+        if self.covar_type == "uniform":
+            vars_tensor = torch.tensor(self.vars_, dtype=self.dtype, device=self.device)
+            em_step = uniform.sgmm_uniform_em
+            em_args = (traj_tensor, frame_weights_tensor, means_tensor, vars_tensor, ln_weights_tensor)
+        else:
+            precisions_tensor = torch.tensor(self.precisions_, dtype=torch.float64, device=self.device)
+            lpdets_tensor = torch.tensor(self.lpdets_, dtype=torch.float64, device=self.device)
+            em_step = kronecker.sgmm_kronecker_em
+            em_args = (traj_tensor, frame_weights_tensor, means_tensor, precisions_tensor, lpdets_tensor, ln_weights_tensor)
+
+        self._verbose_print("Initial component weights during refinement:", self.weights_)
+
+
+        delta_log_lik = self.log_thresh + 100.0
+        old_log_likelihood = torch.tensor(float("inf"), dtype=torch.float64, device=self.device)
+        step = 0
+        while step < self.max_steps and delta_log_lik > self.log_thresh:
+
+            log_likelihood = em_step(*em_args, thresh=self.kabsch_thresh, max_iter=self.kabsch_max_steps)
+
+            if self.verbose:
+                if step == 0:
+                    header = (
+                        f"{'Step':>5} | "
+                        + " ".join([f" w{k+1:02d}  " for k in range(self.n_components)])
+                        + " | LogLikelihood"
+                    )
+                    print(header)
+                    print("-" * len(header))
+
+                weights_now = torch.exp(ln_weights_tensor).cpu().numpy()
+                weights_fmt = " ".join(f"{w:.4f}" for w in weights_now)  # 4 decimal places
+                log_lik_fmt = f"{log_likelihood.item():12.4f}"  # 12 width, 4 decimal places
+                print(f"{step+1:5d} | {weights_fmt} | {log_lik_fmt}")
+
+            delta_log_lik = torch.abs(old_log_likelihood - log_likelihood)
+            old_log_likelihood = log_likelihood
+            step += 1
+
+        self.weights_ = torch.exp(ln_weights_tensor).cpu().numpy()
+        self.means_ = means_tensor.cpu().numpy()
+
+        if self.covar_type == "uniform":
+            self.vars_ = vars_tensor.cpu().numpy()
+        else:
+            self.precisions_ = precisions_tensor.cpu().numpy()
+            self.lpdets_ = lpdets_tensor.cpu().numpy()
+
+        self.is_refined_ = True  # model has been refined!
+        
+        # sort object
+        if self.sort == True:
+            self._sort_object()
+
+    @torch.no_grad()
     def _compute_log_likelihoods(self, traj_data: np.ndarray) -> torch.Tensor:
         """
         Internal helper to compute component-frame log-likelihoods.
@@ -473,3 +558,103 @@ class ShapeGMM:
                 self.lpdets_     = self.lpdets_[sort_key]
         else:
             print("shapeGMM must be fit before it can be sorted.")
+
+
+    def save(self, filename):
+        """
+        Save the ShapeGMM model to a file using torch.save().
+        """
+        if self.covar_type == 'kronecker':
+            torch.save({
+                'n_components': self.n_components,         # int
+                'log_thresh': self.log_thresh,             # float
+                'max_steps': self.max_steps,               # int
+                'covar_type': self.covar_type,             # str
+                'init_component_method': self.init_component_method,  # str
+                'sort': self.sort,                         # bool
+                'kabsch_thresh': self.kabsch_thresh,       # float
+                'kabsch_max_steps': self.kabsch_max_steps, # int
+                'random_seed': self.random_seed,           # int
+                'verbose': self.verbose,                   # bool
+                'dtype': str(self.dtype),                  # stored as str
+                'device': str(self.device),                # stored as str
+                'n_atoms': self.n_atoms,                   # int
+                'weights': self.weights_,                  # np.ndarray 
+                'means': self.means_,                      # np.ndarray 
+                'precisions': self.precisions_,            # np.ndarray 
+                'lnpdet': self.lpdets_,                    # np.ndarray 
+                'is_fitted': self.is_fitted_,              # bool
+                'version': version.__version__             # str
+            }, filename)
+        else:
+            # Uniform or other covariance models
+            torch.save({
+                'n_components': self.n_components,
+                'log_thresh': self.log_thresh,
+                'max_steps': self.max_steps,
+                'covar_type': self.covar_type,
+                'init_component_method': self.init_component_method,
+                'sort': self.sort,
+                'kabsch_thresh': self.kabsch_thresh,
+                'kabsch_max_steps': self.kabsch_max_steps,
+                'random_seed': self.random_seed,
+                'verbose': self.verbose,
+                'dtype': str(self.dtype),
+                'device': str(self.device),
+                'n_atoms': self.n_atoms,
+                'weights': self.weights_,
+                'means': self.means_,
+                'variances': self.vars_,      
+                'is_fitted': self.is_fitted_,
+                'version': version.__version__
+            }, filename)
+
+
+
+    @staticmethod
+    def load(filename):
+        """
+        Load a saved ShapeGMM model from file.
+
+        Parameters
+        ----------
+        filename : str
+            Path to the saved model file.
+
+        Returns
+        -------
+        ShapeGMM
+            Reconstructed ShapeGMM instance.
+        """
+
+        state = torch.load(filename, map_location="cpu")
+        
+        model = ShapeGMM(
+            n_components=state['n_components'],
+            log_thresh=state['log_thresh'],
+            max_steps=state['max_steps'],
+            covar_type=state['covar_type'],
+            init_component_method=state['init_component_method'],
+            sort=state['sort'],
+            kabsch_thresh=state['kabsch_thresh'],
+            kabsch_max_steps=state['kabsch_max_steps'],
+            random_seed=state['random_seed'],
+            verbose=state['verbose'],
+            dtype=getattr(torch, state['dtype'].split('.')[-1]),  # from string back to torch dtype
+            device=torch.device(state['device'])
+        )
+
+        # Restore learned parameters
+        model.n_atoms = state['n_atoms']
+        model.weights_ = state['weights']
+        model.means_ = state['means']
+        model.is_fitted_ = state['is_fitted']
+
+        if model.covar_type == "kronecker":
+            model.precisions_ = state['precisions']
+            model.lpdets_ = state['lnpdet']
+        else:
+            model.variances_ = state['variances']
+
+        return model
+

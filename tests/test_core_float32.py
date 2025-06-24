@@ -82,3 +82,25 @@ def test_kronecker_generate():
     gen_traj = model.generate(n_points)
     assert gen_traj.shape == (n_points, n_atoms, 3)
 
+def test_save_and_load(tmp_path):
+    # Create a dummy model
+    model = ShapeGMM(n_components=2, covar_type='kronecker', random_seed=42, dtype=dtype, device=device)
+    model.is_fitted_ = True
+    model.n_atoms = 5
+    model.weights_ = np.array([0.5, 0.5])
+    model.means_ = np.random.rand(2, 5, 3)
+    model.precisions_ = np.random.rand(2, 5, 5)
+    model.lpdets_ = np.array([1.0, 1.0])
+
+    # Save and load
+    filename = tmp_path / "test_model.pt"
+    model.save(filename)
+    loaded_model = ShapeGMM.load(filename)
+
+    # Check equivalence
+    assert loaded_model.n_components == model.n_components
+    assert loaded_model.is_fitted_ is True
+    assert np.allclose(loaded_model.means_, model.means_)
+    assert np.allclose(loaded_model.precisions_, model.precisions_)
+    assert np.allclose(loaded_model.weights_, model.weights_)
+
