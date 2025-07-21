@@ -52,11 +52,15 @@ def js_divergence(sgmmP, sgmmQ, n_points):
     sterr(js)  : (float) propagated error of sampled JS divergence
     """
     # create new M object that is 0.5(Q+P)
-    sgmmM = ShapeGMM(sgmmP.n_components+sgmmQ.n_components,covar_type="kronecker",device=torch.device("cpu"),dtype=torch.float64)
+    assert sgmmP.covar_type == sgmmQ.covar_type, "covar_types do not match ... cannot compute JS divergence of mismatched covariance types"
+    sgmmM = ShapeGMM(sgmmP.n_components+sgmmQ.n_components,covar_type=sgmmP.covar_type,device=torch.device("cpu"),dtype=torch.float64)
     sgmmM.weights_ = 0.5*np.append(sgmmP.weights_,sgmmQ.weights_)
     sgmmM.means_ = np.concatenate((sgmmP.means_,sgmmQ.means_))
-    sgmmM.precisions_ = np.concatenate((sgmmP.precisions_,sgmmQ.precisions_))
-    sgmmM.lpdets_ = np.concatenate((sgmmP.lpdets_,sgmmQ.lpdets_))
+    if sgmmM.covar_type == "kronecker":
+        sgmmM.precisions_ = np.concatenate((sgmmP.precisions_,sgmmQ.precisions_))
+        sgmmM.lpdets_ = np.concatenate((sgmmP.lpdets_,sgmmQ.lpdets_))
+    else:
+        sgmmM.vars_ = np.concatenate((sgmmP.vars_,sgmmQ.vars_))
     sgmmM.n_atoms = sgmmP.n_atoms
     sgmmM.is_fitted_ = True
     # now measure Kullback Leibler from M to P (or D(P||M))

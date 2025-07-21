@@ -229,13 +229,25 @@ def generate_component_trajectories(sgmm, n_frames_per_component=100):
     u.trajectory.n_frames = n_frames_per_component
     sel_all = u.select_atoms("all")
     # loop through component
-    for luster_id in range(sgmm.n_components):
-
-        trj = generation.gen_mv(sgmm.centers[component_id],sgmm.precisions[component_id],n_frames_per_component)
+    for component_id in range(sgmm.n_components):
+        # create n_atoms x n_atoms precision for either kronecker or uniform
+        if sgmm.covar_type == "kronecker":
+            precision = sgmm.precisions_[component_id]
+        else:
+            precision = 1/sgmm.vars_[component_id] * np.identity(self.n_atoms)
+            # now enforece that constant vector is in null space of precision
+            wsum = -1/sgmm.vars_[component_id]/(sgmm.n_atoms-1)
+            for i in range(sgmm.n_atoms):
+                for j in range(sgmm.n_atoms):
+                    if i != j:
+                        precision[i,j] = wsum
+        # generate trajectory for each component
+        trj = generation.gen_mv(sgmm.means_[component_id],precision,n_frames_per_component)
+        # write component specific files
         pdb_file_name = "component" + str(component_id+1) + "_mean.pdb"
         dcd_file_name = "component" + str(component_id+1) + "_" + str(n_frames_per_component) + "frames.dcd"
         # write pdb of mean structure
-        sel_all.positions = sgmm.centers[component_id]
+        sel_all.positions = sgmm.means_[component_id]
         sel_all.write(pdb_file_name)
         # write dcd of generated trajectory
         with md.Writer(dcd_file_name, sel_all.n_atoms) as W:
@@ -273,8 +285,8 @@ def write_aligned_component_trajectories(
     n_components = len(unique_ids)
 
     align_fn = {
-        "kronecker": align.torch_iterative_align_kronecker,
-        "uniform": align.torch_iterative_align_uniform
+        "kronecker": align.maximum_likelihood_kronecker_alignment,
+        "uniform": align.maximum_likelihood_uniform_alignment
     }.get(covar_type.lower())
 
     if align_fn is None:
@@ -283,7 +295,7 @@ def write_aligned_component_trajectories(
     for component_id, size in zip(unique_ids, component_sizes):
         # Extract and center frames in component
         trj_tensor = torch.tensor(traj_data[component_ids == component_id], dtype=dtype, device=device)
-        trj_tensor = torch_remove_center_of_geometry(trj_tensor)
+        trj_tensor = align.remove_center_of_geometry(trj_tensor)
 
         # Align frames
         aligned_traj_tensor, *_ = align_fn(trj_tensor)
@@ -323,10 +335,13 @@ def write_representative_frames(sgmm, traj_data, component_ids):
     for component_id in range(sgmm.n_components):
         # create a shapeGMM object with just this component
         sgmmM = ShapeGMM(1,covar_type=sgmm.covar_type,device=torch.device("cpu"),dtype=sgmm.dtype)
-        sgmmM.weights = np.array([1.0])
-        sgmmM.centers = sgmm.centers[component_id].reshape(1,n_atoms,3)
-        sgmmM.precisions = sgmm.precisions[component_id].reshape(1,n_atoms,n_atoms)
-        sgmmM.lpdets = np.array([sgmm.lpdets[component_id]])
+        sgmmM.weights_ = np.array([1.0])
+        sgmmM.means_ = sgmm.means_[component_id].reshape(1,n_atoms,3)
+        if sgmm.covar_type == 'kronecker':
+            sgmmM.precisions_ = sgmm.precisions_[component_id].reshape(1,n_atoms,n_atoms)
+            sgmmM.lpdets_ = np.array([sgmm.lpdets[component_id]])
+        else:
+            sgmmM.vars_ = np.array([sgmm.vars_[component_id]])
         sgmmM.n_atoms = sgmm.n_atoms
         sgmmM.is_fitted_ = True
         # compute LL using the predict function

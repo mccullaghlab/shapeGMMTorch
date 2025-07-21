@@ -36,10 +36,3 @@ def cov_from_prec(prec):
     covN = np.dot(v.T,np.dot(np.diag(e),v))
     return np.kron(covN,np.identity(3))
 
-def generate(sgmm,n_frames):
-    component_ids = component_ids_from_rand(np.random.rand(n_frames),sgmm.weights)
-    trj = np.empty((n_frames,sgmm.n_atoms,3))
-    for component_id in range(sgmm.n_components):
-        indeces = np.argwhere(component_ids == component_id).flatten()
-        trj[indeces] = gen_mv(sgmm.centers[component_id],sgmm.precisions[component_id],indeces.size)
-    return trj
