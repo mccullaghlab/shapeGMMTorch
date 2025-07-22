@@ -7,7 +7,7 @@
 
 ## Overview
 
-This is a package to perform Gaussian Mixture Model (GMM) clustering on particle positions (in <img src="https://render.githubusercontent.com/render/math?math=\mathbb{R}^3">). Like other GMM schemes, the user must specify the number of clusters and a cluster initialization scheme (defaults to random).  This is specified in the object initialization line, analagous to how it is done for the sklearn GaussianMixture package.  There are two choices for the form of the covariance  specified by the `covar_type` keyword in the object initialization.  See paper (Klem et al JCTC 2022, https://pubs.acs.org/doi/abs/10.1021/acs.jctc.1c01290) for additional details.
+This is a package to perform Gaussian Mixture Model (GMM) clustering on particle positions (in <img src="https://render.githubusercontent.com/render/math?math=\mathbb{R}^3">). Like other GMM schemes, the user must specify the number of clusters and a cluster initialization scheme (defaults to random).  This is specified in the object initialization line, analogous to how it is done for the sklearn GaussianMixture package.  There are two choices for the form of the covariance  specified by the `covar_type` keyword in the object initialization.  See paper (Klem et al JCTC 2022, https://pubs.acs.org/doi/abs/10.1021/acs.jctc.1c01290) for additional details.
 
 ## Dependencies
 
@@ -42,14 +42,14 @@ Uniform covariance (spherical, uncorrelated, homogeneous):
 
 `uni_sgmm = ShapeGMM(n_components, covar_type = 'uniform', verbose=True)`
 
-Kronecker product covariance (formerly call weighted covariance; spherical, correlated, heterogeneous):
+Kronecker product covariance (formerly called weighted covariance; spherical, correlated, heterogeneous):
 
 `kron_sgmm = ShapeGMM(n_components, covar_type = 'kronecker', verbose=True)`
 
-During initialization, the following options are availble:
+During initialization, the following options are available:
 
 	- n_components (required) - integer number of components must be input
-	- covar_type              - string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Defualt is 'kronecker'.
+	- covar_type              - string defining the covariance type.  Options are 'kronecker' and 'uniform'.  Default is 'kronecker'.
 	- log_thresh              - float threshold in log likelihood difference to determine convergence. Default value is 1e-3.
 	- max_steps               - integer maximum number of steps that the GMM procedure will do.  Default is 200.
 	- init_component_method   - string dictating how to initialize components.  Understood values are 'kmeans++', 'chunk', 'read' and 'random'.  Default is 'kmeans++'.
@@ -58,7 +58,7 @@ During initialization, the following options are availble:
 	- kabsch_thresh           - float dictating convergence criteria for each iterative alignment (Maximization step).  Default value is 1e-1.
 	- dtype                   - Torch data type to be used.  Default is torch.float32.
 	- device                  - Torch device to be used.  Default is torch.device('cuda:0') device.
-	- verbose                 - boolean dictating whether to print various things at every step. Defualt is False.
+	- verbose                 - boolean dictating whether to print various things at every step. Default is False.
 
 ### Fit:
 
@@ -68,9 +68,9 @@ A standard fit can be performed in the following manner:
 
 `kron_sgmm.fit(train_positions)`
 
-where `train_positions` is an array of dimensions `(n_train_frames, n_atoms, 3)`. Notice there is no difference in syntax when fitting the two covariance types.  Two additional options are available during the fit routine which may be necessary under certain situations:
+where `train_positions` is an array of dimensions `(n_train_frames, n_atoms, 3)`. Notice there is no difference in syntax when fitting the two covariance types. The fit method also accepts two optional arguments, which may be required depending on the initialization method and/or the type of simulation from which the data stems: 
 
-	- component_ids   (optional) - (n_train_frames) integer array of initial component/cluster ids.  This option is necessary if init_component_method = 'read'
+	- component_ids   (optional) - (n_train_frames) integer array of initial component/cluster ids.  This option is only used if init_component_method = 'read', in which case it is necessary.
 	- frame_weights (optional) - (n_train_frames) float array of relative frame weights.  If none are provided the code assumes equal weights for all frames.
 
 If these options are used the fit call looks like
@@ -81,70 +81,42 @@ If these options are used the fit call looks like
 
 ### Label and Score:
 
-To label and score (log likelihood per frame) the training set:
+Once fit, a ShapeGMM object can be used to label and score data. The data need not be the training data but must have the same number of atoms/particles.  To label and score (log likelihood per frame) trajectory data, `cv_positions`, of dimensions `(n_cv_frames, n_atoms, 3)`:
 
 for uniform model:
 
-`uni_train_component_ids  = uni_sgmm.predict(train_positions)`
+`uni_train_component_ids  = uni_sgmm.predict(cv_positions)`
 
-`uni_train_log_likelihood = uni_sgmm.score(train_positions)`
+`uni_train_log_likelihood = uni_sgmm.score(cv_positions)`
 
 for kronecker model:
 
-`kron_train_component_ids = kron_sgmm.predict(train_positions)`
+`kron_train_component_ids = kron_sgmm.predict(cv_positions)`
 
-`kron_train_log_likelihood = kron_sgmm.score(train_positions)`
+`kron_train_log_likelihood = kron_sgmm.score(cv_positions)`
 
-If the training set has non-uniform frame weights this must be taken into account in the scoring function:
-
-uniform model:
-
-`uni_train_log_likelihood = uni_sgmm.score(train_positions, frame_weights = train_frame_weights)`
-
-kronecker model:
-
-`kron_train_log_likelihood = kron_sgmm.score(train_positions, frame_weights = train_frame_weights)`
-
-### Predict:
-
-Once the shapeGMM object has been fit, it can be used to predict component IDs and log likelihood per frame for a new, or cross validation, trajectory.  The number of atoms must remain the same.  The simple syntax is as follows:
+If the trajectory has non-uniform frame weights this must be taken into account in the scoring function with float array `cv_frame_weights` of dimension `(n_cv_frames)`:
 
 uniform model:
 
-`uni_cv_component_ids  = uni_sgmm.predict(predict_positions)`
-
-`uni_cv_log_likelihood = uni_sgmm.score(predict_positions)`
+`uni_train_log_likelihood = uni_sgmm.score(cv_positions, frame_weights = cv_frame_weights)`
 
 kronecker model:
 
-`kron_cv_component_ids = kron_sgmm.predict(predict_positions)`
+`kron_train_log_likelihood = kron_sgmm.score(cv_positions, frame_weights = cv_frame_weights)`
 
-`kron_cv_log_likelihood = kron_sgmm.score(predict_positions)`
-
-where `predict_positions` is an array of dimensions `(n_predict_frames, n_atoms, 3)`. Notice there is no difference in syntax when precicting the two covariance types.  If the predict frames have a non-unifrom frame weight, this can be accounted for in the score function with an additional option 
-
-	- frame_weights (optional) - (n_predict_frames) float array of relative frame weights.  If none are provided the code assumes equal weights for all frames.
-
-If this option is used the predict call will look like
-
-uniform model:
-
-`uni_cv_log_likelihood = uni_sgmm.score(predict_positions, frame_weights = predict_frame_weights)`
-
-kronecker model:
-
-`kron_cv_log_likelihood = kron_sgmm.score(predict_positions, frame_weights = predict_frame_weights)`
+The result of the `predict` function will be an integer array of component assignment of dimension `(n_cv_frames)`.  The result of the `score` function will be a scalar float (log-likelihood per frame).
 
 ## Attributes
 
-After being properly fit, a shapeGMM object will have the following attributes:
+After being properly fit, a ShapeGMM object will have the following attributes:
 
-	- weights_                   - (n_components) float array of cluster weights
-	- means_                     - (n_components, n_atoms, 3) float array of cluster centers/averages
+	- weights_                   - (n_components) float array of component weights
+	- means_                     - (n_components, n_atoms, 3) float array of component centers/averages
 
 Uniform covariance specific attributes
 
-	- vars_		       	         - (n_components) float array of cluster variances
+	- vars_		       	         - (n_components) float array of component variances
 
 Kronecker covariance specific attributes
 
@@ -153,11 +125,11 @@ Kronecker covariance specific attributes
 
 ## Fitting with multiple attempts
 
-Because the EM algortihm is prone to getting caught in local maxima, we suggest performing multiple fit attempts, with different random initializations, to help determine the optimal shapeGMM parameters.  We provide a srcipt to achieve this.
+Because the EM algorithm is prone to getting caught in local maxima, we suggest performing multiple fit attempts, with different random initializations, to help determine the optimal ShapeGMM parameters.  We provide a script to achieve this.
 
 
 ```python
-from shapeGMMTorch.utils.io import sgmm_fit_with_attempts
+from shapeGMMTorch.utils import sgmm_fit_with_attempts
 
 best_model = sgmm_fit_with_attempts(
     traj_data=my_trajectory,         # shape: (n_frames, n_atoms, 3)
@@ -199,10 +171,8 @@ best_model = sgmm_fit_with_attempts(
 
 `shapeGMMTorch` provides a utility function to perform cross-validation across a range of GMM component numbers to guide model selection.
 
-### `cross_validate_component_scan`
-
 ```python
-from shapeGMMTorch.utils.validation import cross_validate_component_scan
+from shapeGMMTorch.utils import cross_validate_component_scan
 ```
 
 This routine performs k-fold-style cross-validation to evaluate the model log-likelihood on both training and validation sets for multiple values of `n_components`.
