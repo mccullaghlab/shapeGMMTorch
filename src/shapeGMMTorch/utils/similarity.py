@@ -164,7 +164,15 @@ def bhattacharyya_distance(sgmm1,component_id1,sgmm2,component_id2):
     returns:
     D           : (float) Bhattacharya distance
     """
-    sigma = 0.5*(_pinv(sgmm1.precisions_[component_id1]) + _pinv(sgmm2.precisions_[component_id2]))
+    assert sgmm1.covar_type == sgmm2.covar_type, "covar_types do not match ... cannot compute Bhattacharya distance between objects with mismatched covariance types"
+    if sgmm1.covar_type == "kronecker":
+        sigma = 0.5*(_pinv(sgmm1.precisions_[component_id1]) + _pinv(sgmm2.precisions_[component_id2]))
+        lnpdet1 = sgmm1.lpdets_[component_id1]
+        lnpdet2 = sgmm2.lpdets_[component_id2]
+    else: # uniform
+        sigma = 0.5*(sgmm1.vars_[component_id1] + sgmm2.vars_[component_id2])*np.eye(sgmm1.n_atoms)
+        lnpdet1 = sgmm1.n_atoms * np.log(sgmm1.vars_[component_id1])
+        lnpdet2 = sgmm2.n_atoms * np.log(sgmm2.vars_[component_id2])
     prec, lnpdet = _pinv_lnpdet(sigma)
     traj = np.empty((2,sgmm1.n_atoms,3))
     traj[0] = sgmm1.means_[component_id1]
@@ -173,6 +181,6 @@ def bhattacharyya_distance(sgmm1,component_id1,sgmm2,component_id2):
     D = maha_dist2(traj[0],traj[1],prec)
     D /= 8
     D += 0.5*lnpdet
-    D -= 0.25 * (sgmm1.lpdets_[component_id1] + sgmm2.lpdets_[component_id2])
+    D -= 0.25 * (lnpdet1 + lnpdet2)
     return D
 

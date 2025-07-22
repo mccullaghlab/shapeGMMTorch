@@ -234,7 +234,7 @@ def generate_component_trajectories(sgmm, n_frames_per_component=100):
         if sgmm.covar_type == "kronecker":
             precision = sgmm.precisions_[component_id]
         else:
-            precision = 1/sgmm.vars_[component_id] * np.identity(self.n_atoms)
+            precision = 1/sgmm.vars_[component_id] * np.identity(sgmm.n_atoms)
             # now enforece that constant vector is in null space of precision
             wsum = -1/sgmm.vars_[component_id]/(sgmm.n_atoms-1)
             for i in range(sgmm.n_atoms):
@@ -339,7 +339,7 @@ def write_representative_frames(sgmm, traj_data, component_ids):
         sgmmM.means_ = sgmm.means_[component_id].reshape(1,n_atoms,3)
         if sgmm.covar_type == 'kronecker':
             sgmmM.precisions_ = sgmm.precisions_[component_id].reshape(1,n_atoms,n_atoms)
-            sgmmM.lpdets_ = np.array([sgmm.lpdets[component_id]])
+            sgmmM.lpdets_ = np.array([sgmm.lpdets_[component_id]])
         else:
             sgmmM.vars_ = np.array([sgmm.vars_[component_id]])
         sgmmM.n_atoms = sgmm.n_atoms
