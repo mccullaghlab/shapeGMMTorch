@@ -212,10 +212,11 @@ def maximum_likelihood_uniform_alignment_in_place(
         avg = torch.mean(traj_tensor, dim=0, keepdim=False)
 
         # Compute displacements
-        disp = (traj_tensor - avg).to(torch.float64)
+        #disp = (traj_tensor - avg).to(torch.float64)
 
         # Compute variance
-        var = torch.sum(disp*disp) * var_norm
+        #var = disp.square_().sum() * var_norm
+        var = (traj_tensor - avg).pow(2).sum() * var_norm        
 
         # Compute log-likelihood
         log_lik = log_lik_prefactor * (torch.log(var) + 1.0)
@@ -230,7 +231,6 @@ def maximum_likelihood_uniform_alignment_in_place(
     if kabsch_iter == max_iter:
         print("Warning: ML alignment not completely converged")
 
-    del disp
     if device.type == "cuda":
         torch.cuda.empty_cache()
     # Return results
@@ -311,15 +311,12 @@ def maximum_likelihood_uniform_alignment_frame_weighted_in_place(
         # Apply rotation in place
         traj_tensor[...] = torch.matmul(traj_tensor, rot_mat)
 
-        # Compute weighted average
+        # Compute frame-weighted average
         avg = torch.einsum('ijk,i->jk', traj_tensor, weight_tensor)  # weighted average 
 
-        # compute displacement then cast to f64
-        disp = (traj_tensor - avg).to(torch.float64)
-        
-        # Compute variance
-        disp_squared = torch.sum(disp ** 2, dim=(1, 2))  # (n_frames,)
-        var = torch.dot(disp_squared.to(dtype), weight_tensor) * var_norm
+        # Compute frame-weighted variance
+        disp = traj_tensor - avg  # shape: (n_frames, n_atoms, 3)
+        var = torch.einsum("ijk,ijk,i->", disp, disp, weight_tensor) * var_norm
 
         # Compute log-likelihood
         log_lik = log_lik_prefactor * (torch.log(var) + 1.0)
@@ -334,7 +331,7 @@ def maximum_likelihood_uniform_alignment_frame_weighted_in_place(
     if kabsch_iter == max_iter:
         print("Warning: ML alignment not completely converged")
 
-    del disp, disp_squared
+    del disp
     if device.type == "cuda":
         torch.cuda.empty_cache()
     # Return results
