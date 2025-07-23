@@ -64,11 +64,12 @@ def trajectory_sd(traj_tensor: torch.Tensor, ref_tensor: torch.Tensor) -> torch.
 
 @torch.no_grad()
 def _kronecker_covar(disp: torch.Tensor, covar_norm: float) -> torch.Tensor:
-    n_frames = disp.shape[0]
-    disp = torch.transpose(disp,0,1).reshape(-1,n_frames*3)
-    covar = disp @ disp.T
-    covar *= covar_norm
-    return covar
+    #n_frames = disp.shape[0]
+    #disp = torch.transpose(disp,0,1).reshape(-1,n_frames*3)
+    #covar = disp @ disp.T
+    #covar *= covar_norm
+    #return covar
+    return torch.einsum('fij,fkj->ik', disp, disp) * covar_norm
 
     
 # determine the ln(det) of a singular matrix ignoring eigenvalues below threshold
