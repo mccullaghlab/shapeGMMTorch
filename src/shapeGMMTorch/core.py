@@ -113,8 +113,8 @@ class ShapeGMM:
         self.random_seed = random_seed
 
         if random_seed is not None:
-            np.random.seed(random_seed)
             torch.manual_seed(random_seed)
+        self.rng = np.random.default_rng(random_seed)
 
     def _verbose_print(self, *args):
         if self.verbose:
@@ -135,12 +135,11 @@ class ShapeGMM:
             Initial cluster assignment of shape (n_frames,)
         """
 
-        rng = np.random.default_rng(self.random_seed if hasattr(self, "random_seed") else None)
         n_frames = traj_tensor.shape[0]
 
         # choose first frame
         dists2 = torch.empty((n_frames,self.n_components), dtype=self.dtype, device=self.device)
-        dists2[:,0] = align_in_place.trajectory_sd(traj_tensor, traj_tensor[rng.choice(n_frames)])
+        dists2[:,0] = align_in_place.trajectory_sd(traj_tensor, traj_tensor[self.rng.choice(n_frames)])
 
         for c in range(1, self.n_components):
             # determine min distances
@@ -181,7 +180,7 @@ class ShapeGMM:
             component_ids = self._kmeans_pp_seeding(traj_tensor)
         else:
             if self.n_components > 1:
-                component_ids = np.random.choice(self.n_components, size=self.n_train_frames)
+                component_ids = self.rng.choice(self.n_components, size=self.n_train_frames)
             else:
                 component_ids = np.zeros(self.n_train_frames,dtype=int)
 
@@ -526,7 +525,7 @@ class ShapeGMM:
             raise RuntimeError("ShapeGMM must be fit before calling generate().")
             
         # generate random component ids based on frame weights - not could adapt this to account for transition matrix
-        component_ids = generation.component_ids_from_rand(np.random.rand(n_frames),self.weights_)
+        component_ids = generation.component_ids_from_rand(self.rng.random.rand(n_frames),self.weights_)
         trj = np.empty((n_frames,self.n_atoms,3))
         for component_id in range(self.n_components):
             if self.covar_type == "kronecker":

@@ -59,7 +59,8 @@ def cross_validate_component_scan(traj_data, component_array, train_fraction=0.9
     """
     if random_seed is None:
         random_seed = 1234
-        np.random.seed(random_seed)
+    rng = np.random.default_rng(random_seed)
+
     n_frames = traj_data.shape[0]
     n_atoms = traj_data.shape[1]
     assert 0.0 < train_fraction < 1.0, "train_fraction must be between 0 and 1 (exclusive)."
@@ -82,7 +83,7 @@ def cross_validate_component_scan(traj_data, component_array, train_fraction=0.9
         sys.stdout.flush()
 
     for i in range(n_training_sets):
-        train_indices = np.random.choice(n_frames, size=n_train_frames, replace=False)
+        train_indices = rng.choice(n_frames, size=n_train_frames, replace=False)
         cv_indices = np.setdiff1d(np.arange(n_frames), train_indices)
 
         traj_train = traj_data[train_indices]
@@ -101,6 +102,7 @@ def cross_validate_component_scan(traj_data, component_array, train_fraction=0.9
 
             for attempt in range(current_attempts):
                 start_time = time.time()
+                model_seed = random_seed + 100000*i + 1000*j + attempt
                 model = ShapeGMM(
                     n_components=k,
                     log_thresh=thresh,
@@ -109,7 +111,7 @@ def cross_validate_component_scan(traj_data, component_array, train_fraction=0.9
                     device=device,
                     kabsch_thresh=kabsch_thresh,
                     init_component_method = init_component_method,
-                    random_seed=random_seed + attempt*121,
+                    random_seed=model_seed,
                     verbose=False
                 )
                 model.fit(traj_train, frame_weights=weights_train)
