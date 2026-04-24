@@ -525,7 +525,7 @@ class ShapeGMM:
             raise RuntimeError("ShapeGMM must be fit before calling generate().")
             
         # generate random component ids based on frame weights - not could adapt this to account for transition matrix
-        component_ids = generation.component_ids_from_rand(self.rng.random.rand(n_frames),self.weights_)
+        component_ids = generation.component_ids_from_rand(self.rng.random(n_frames),self.weights_)
         trj = np.empty((n_frames,self.n_atoms,3))
         for component_id in range(self.n_components):
             if self.covar_type == "kronecker":
